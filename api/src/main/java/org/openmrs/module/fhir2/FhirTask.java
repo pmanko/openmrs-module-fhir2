@@ -9,9 +9,8 @@
  */
 package org.openmrs.module.fhir2;
 
-import javax.persistence.CollectionTable;
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
-import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
@@ -19,6 +18,8 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
+import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
 import java.util.Collection;
@@ -68,23 +69,33 @@ public class FhirTask extends BaseOpenmrsData {
 	private TaskIntent intent;
 	
 	/**
-	 * Referenced resources represented with relative resource identifier string in the format of
-	 * <ResourceName>/<ResourceId>.
+	 * BasedOn refers to a higher-level authorization that triggered the creation of the task. It
+	 * references a "request" resource such as a ServiceRequest, MedicationRequest, ServiceRequest,
+	 * CarePlan, etc. which is distinct from the "request" resource the task is seeking to fulfill. This
+	 * latter resource is referenced by FocusOn. For example, based on a ServiceRequest (= BasedOn), a
+	 * task is created to fulfill a procedureRequest ( = FocusOn ) to collect a specimen from a patient.
 	 */
-	@Column(name = "based_on")
-	private String basedOn;
+	@OneToMany(cascade = CascadeType.ALL)
+	@JoinColumn(name = "based_on_reference_id", referencedColumnName = "reference_id")
+	private Collection<FhirReference> basedOnReferences;
 	
-	@ElementCollection
-	@CollectionTable(name = "fhir_task_inputs", joinColumns = @JoinColumn(name = "task_input_id"))
-	@Column(name = "input")
-	private Collection<String> inputs;
+	@OneToOne(cascade = CascadeType.ALL)
+	@JoinColumn(name = "for_reference_id", referencedColumnName = "reference_id")
+	private FhirReference forReference;
 	
-	@ElementCollection
-	@CollectionTable(name = "fhir_task_outputs", joinColumns = @JoinColumn(name = "task_output_id"))
-	@Column(name = "output")
-	private Collection<String> outputs;
+	@OneToOne(cascade = CascadeType.ALL)
+	@JoinColumn(name = "encounter_reference_id", referencedColumnName = "reference_id")
+	private FhirReference encounterReference;
 	
-	@Column(name = "description")
-	private String description;
+	@OneToOne(cascade = CascadeType.ALL)
+	@JoinColumn(name = "owner_reference_id", referencedColumnName = "reference_id")
+	private FhirReference ownerReference;
 	
+	@OneToMany(cascade = CascadeType.ALL)
+	@JoinColumn(name = "task_id")
+	private Collection<FhirTaskInput> input;
+	
+	@OneToMany(cascade = CascadeType.ALL)
+	@JoinColumn(name = "task_id")
+	private Collection<FhirTaskOutput> output;
 }

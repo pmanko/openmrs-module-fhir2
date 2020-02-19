@@ -94,7 +94,6 @@ public class DiagnosticReportTranslatorImplTest {
 		// Mocks for DiagnosticReport.result
 		when(observationReferenceTranslator.toFhirResource(childObs)).thenReturn(obsReference);
 		when(observationReferenceTranslator.toOpenmrsType(obsReference)).thenReturn(childObs);
-		
 	}
 	
 	@Test

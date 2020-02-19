@@ -9,16 +9,33 @@
  */
 package org.openmrs.module.fhir2.api.translators.impl;
 
+import javax.inject.Inject;
+
+import java.util.stream.Collectors;
+
 import lombok.AccessLevel;
 import lombok.Setter;
+import org.hl7.fhir.r4.model.CodeableConcept;
+import org.hl7.fhir.r4.model.Reference;
+import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.Task;
 import org.openmrs.module.fhir2.FhirTask;
+import org.openmrs.module.fhir2.FhirTaskInput;
+import org.openmrs.module.fhir2.FhirTaskOutput;
+import org.openmrs.module.fhir2.api.translators.ConceptTranslator;
+import org.openmrs.module.fhir2.api.translators.ReferenceTranslator;
 import org.openmrs.module.fhir2.api.translators.TaskTranslator;
 import org.springframework.stereotype.Component;
 
 @Component
 @Setter(AccessLevel.PACKAGE)
 public class TaskTranslatorImpl implements TaskTranslator {
+	
+	@Inject
+	private ReferenceTranslator referenceTranslator;
+	
+	@Inject
+	private ConceptTranslator conceptTranslator;
 	
 	@Override
 	public Task toFhirResource(FhirTask openmrsTask) {
@@ -56,12 +73,44 @@ public class TaskTranslatorImpl implements TaskTranslator {
 	
 	private void setFhirTaskFields(FhirTask openmrsTask, Task fhirTask) {
 		fhirTask.setId(openmrsTask.getUuid());
+		
 		if (openmrsTask.getStatus() != null) {
 			fhirTask.setStatus(Task.TaskStatus.valueOf(openmrsTask.getStatus().name()));
 		}
 		if (openmrsTask.getIntent() != null) {
 			fhirTask.setIntent(Task.TaskIntent.valueOf(openmrsTask.getIntent().name()));
 		}
+		
+		if (openmrsTask.getBasedOnReferences() != null) {
+			fhirTask.setBasedOn(openmrsTask.getBasedOnReferences().stream().map(referenceTranslator::toFhirResource)
+			        .collect(Collectors.toList()));
+		}
+		
+		if (openmrsTask.getEncounterReference() != null) {
+			fhirTask.setEncounter(referenceTranslator.toFhirResource(openmrsTask.getEncounterReference()));
+		}
+		
+		if (openmrsTask.getForReference() != null) {
+			fhirTask.setFor(referenceTranslator.toFhirResource(openmrsTask.getForReference()));
+		}
+		
+		if (openmrsTask.getOwnerReference() != null) {
+			fhirTask.setOwner(referenceTranslator.toFhirResource(openmrsTask.getOwnerReference()));
+		}
+		
+		if (openmrsTask.getInput() != null) {
+			fhirTask.setInput(
+			    openmrsTask.getInput().stream().map(this::translateFromInputText).collect(Collectors.toList()));
+		}
+		
+		if (openmrsTask.getOutput() != null) {
+			fhirTask.setOutput(
+			    openmrsTask.getOutput().stream().map(this::translateFromOutputReferences).collect(Collectors.toList()));
+		}
+		
+		fhirTask.setAuthoredOn(openmrsTask.getDateCreated());
+		
+		fhirTask.setLastModified(openmrsTask.getDateChanged());
 	}
 	
 	private void setOpenmrsTaskFields(FhirTask openmrsTask, Task fhirTask) {
@@ -74,6 +123,35 @@ public class TaskTranslatorImpl implements TaskTranslator {
 		if (fhirTask.getIntent() != null) {
 			openmrsTask.setIntent(FhirTask.TaskIntent.valueOf(fhirTask.getIntent().name()));
 		}
+		
+		if (fhirTask.getBasedOn() != null) {
+			openmrsTask.setBasedOnReferences(
+			    fhirTask.getBasedOn().stream().map(referenceTranslator::toOpenmrsType).collect(Collectors.toList()));
+		}
+		
+		if (fhirTask.getEncounter() != null) {
+			openmrsTask.setEncounterReference(referenceTranslator.toOpenmrsType(fhirTask.getEncounter()));
+		}
+		
+		if (fhirTask.getFor() != null) {
+			openmrsTask.setForReference(referenceTranslator.toOpenmrsType(fhirTask.getFor()));
+		}
+		
+		if (fhirTask.getOwner() != null) {
+			openmrsTask.setOwnerReference(referenceTranslator.toOpenmrsType(fhirTask.getOwner()));
+		}
 	}
 	
+	private Task.TaskOutputComponent translateFromOutputReferences(FhirTaskOutput openmrsOutput) {
+		Reference ref = referenceTranslator.toFhirResource(openmrsOutput.getValueReference());
+		CodeableConcept type = conceptTranslator.toFhirResource(openmrsOutput.getType());
+		
+		return new Task.TaskOutputComponent().setType(type).setValue(ref);
+	}
+	
+	private Task.ParameterComponent translateFromInputText(FhirTaskInput openmrsInput) {
+		CodeableConcept type = conceptTranslator.toFhirResource(openmrsInput.getType());
+		
+		return new Task.ParameterComponent().setType(type).setValue(new StringType().setValue(openmrsInput.getValueText()));
+	}
 }

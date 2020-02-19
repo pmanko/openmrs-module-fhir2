@@ -76,7 +76,7 @@ public class FhirTaskServiceImplTest {
 		when(translator.toFhirResource(task)).thenReturn(translatedTask);
 		
 		org.hl7.fhir.r4.model.Task result = fhirTaskService.getTaskByUuid(TASK_UUID);
-
+		
 		assertNotNull(result);
 		assertThat(result, equalTo(translatedTask));
 	}

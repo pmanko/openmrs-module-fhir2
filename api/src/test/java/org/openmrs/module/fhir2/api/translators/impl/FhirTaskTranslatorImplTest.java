@@ -9,20 +9,35 @@
  */
 package org.openmrs.module.fhir2.api.translators.impl;
 
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 
+import java.util.Collections;
+
+import org.hl7.fhir.r4.model.Identifier;
+import org.hl7.fhir.r4.model.Reference;
+import org.hl7.fhir.r4.model.ServiceRequest;
 import org.hl7.fhir.r4.model.Task;
 import org.junit.Before;
 import org.junit.Test;
+import org.openmrs.module.fhir2.FhirConstants;
 import org.openmrs.module.fhir2.FhirTask;
 
 public class FhirTaskTranslatorImplTest {
 	
 	private static final String TASK_UUID = "d899333c-5bd4-45cc-b1e7-2f9542dbcbf6";
-	
+
+	private static final String PATIENT_UUID = "123456-abcdef-123456";
+
+	private static final String SERVICE_REQUEST_UUID = "4e4851c3-c265-400e-acc9-1f1b0ac7f9c4";
+
+	private static final String DIAGNOSTIC_REPORT_UUID = "249b9094-b812-4b0c-a204-0052a05c657f";
+
+	private static final String ENCOUNTER_UUID = "34h34hj-343jk32-34nl3kd-34jk34";
+
 	private static final Task.TaskStatus FHIR_TASK_STATUS = Task.TaskStatus.REQUESTED;
 	
 	private static final Task.TaskStatus FHIR_NEW_TASK_STATUS = Task.TaskStatus.ACCEPTED;
@@ -33,62 +48,36 @@ public class FhirTaskTranslatorImplTest {
 	
 	private static final Task.TaskIntent FHIR_TASK_INTENT = Task.TaskIntent.ORDER;
 	
-	private static final Task.TaskIntent FHIR_NEW_TASK_INTENT = Task.TaskIntent.ORIGINALORDER;
-	
 	private static final FhirTask.TaskIntent OPENMRS_TASK_INTENT = FhirTask.TaskIntent.ORDER;
 	
-	private static final FhirTask.TaskIntent OPENMRS_NEW_TASK_INTENT = FhirTask.TaskIntent.ORDER;
-	
+	private static final String OPENELIS_ID = "openelis";
+
 	private TaskTranslatorImpl taskTranslator;
 	
 	@Before
 	public void setup() {
 		taskTranslator = new TaskTranslatorImpl();
-		
 	}
 	
 	@Test
-	public void shouldTranslateOpenmrsTaskToFhirTask() {
+	public void toFhirResource_shouldTranslateOpenmrsTaskToFhirTask() {
 		FhirTask task = new FhirTask();
 		Task result = taskTranslator.toFhirResource(task);
 		assertThat(result, notNullValue());
 	}
-	
+
+
 	@Test
-	public void shouldTranslateFhirTaskToOpenmrsTask() {
+	public void toOpenmrsType_shouldTranslateFhirTaskToOpenmrsTask() {
 		Task task = new Task();
+
 		FhirTask result = taskTranslator.toOpenmrsType(task);
+
 		assertThat(result, notNullValue());
 	}
-	
+
 	@Test
-	public void shouldTranslateOpenmrsTaskStatusIntentToFhirTaskStatusIntent() {
-		FhirTask task = new FhirTask();
-		task.setStatus(OPENMRS_TASK_STATUS);
-		task.setIntent(OPENMRS_TASK_INTENT);
-		
-		Task result = taskTranslator.toFhirResource(task);
-		
-		assertThat(result, notNullValue());
-		assertThat(result.getStatus(), equalTo(FHIR_TASK_STATUS));
-		assertThat(result.getIntent(), equalTo(FHIR_TASK_INTENT));
-	}
-	
-	@Test
-	public void shouldTranslateFhirTaskStatusIntentToOpenmrsTaskStatusIntent() {
-		Task task = new Task();
-		task.setStatus(FHIR_TASK_STATUS);
-		task.setIntent(FHIR_TASK_INTENT);
-		
-		FhirTask result = taskTranslator.toOpenmrsType(task);
-		
-		assertThat(result, notNullValue());
-		assertThat(result.getStatus(), equalTo(OPENMRS_TASK_STATUS));
-		assertThat(result.getIntent(), equalTo(OPENMRS_TASK_INTENT));
-	}
-	
-	@Test
-	public void shouldTranslateNewOpenmrsTask() {
+	public void toOpenmrsType_shouldTranslateNewOpenmrsTask() {
 		Task fhirTask = new Task();
 		
 		FhirTask result = taskTranslator.toOpenmrsType(fhirTask);
@@ -96,87 +85,259 @@ public class FhirTaskTranslatorImplTest {
 		assertThat(result, notNullValue());
 		assertThat(result.getUuid(), notNullValue());
 	}
-	
+
 	@Test
-	public void shouldTranslateStatusIntentToOpenmrsTask() {
+	public void toOpenmrsType_shouldIgnoreUUIDForNewOpenmrsTask() {
 		Task fhirTask = new Task();
-		fhirTask.setStatus(FHIR_NEW_TASK_STATUS);
-		fhirTask.setIntent(FHIR_TASK_INTENT);
-		
-		FhirTask result = taskTranslator.toOpenmrsType(fhirTask);
-		
-		assertThat(result, notNullValue());
-		assertThat(result.getStatus(), equalTo(OPENMRS_NEW_TASK_STATUS));
-		assertThat(result.getIntent(), equalTo(OPENMRS_TASK_INTENT));
-		assertThat(result.getUuid(), notNullValue());
-	}
-	
-	@Test
-	public void shouldIgnoreUUIDForNewOpenmrsTask() {
-		Task fhirTask = new Task();
-		
+
 		fhirTask.setId(TASK_UUID);
-		
+
 		FhirTask result = taskTranslator.toOpenmrsType(fhirTask);
-		
+
 		assertThat(result, notNullValue());
 		assertThat(result.getUuid(), not(equalTo(TASK_UUID)));
 	}
-	
+
 	@Test
-	public void shouldUpdateExistingOpenmrsTask() {
+	public void toOpenmrsType_shouldUpdateExistingOpenmrsTask() {
 		FhirTask task = new FhirTask();
 		task.setUuid(TASK_UUID);
-		
+
 		Task fhirTask = taskTranslator.toFhirResource(task);
 		fhirTask.setStatus(FHIR_NEW_TASK_STATUS);
-		
+
 		FhirTask result = taskTranslator.toOpenmrsType(task, fhirTask);
-		
+
 		assertThat(result, notNullValue());
 		assertThat(result.getStatus(), equalTo(OPENMRS_NEW_TASK_STATUS));
 	}
-	
+
 	@Test
-	public void shouldCreateOpenmrsTaskWhenNull() {
+	public void toOpenmrsType_shouldCreateOpenmrsTaskWhenNull() {
 		Task fhirTask = new Task();
 		fhirTask.setId(TASK_UUID);
 		fhirTask.setStatus(FHIR_NEW_TASK_STATUS);
-		
+
 		FhirTask result = taskTranslator.toOpenmrsType(null, fhirTask);
-		
+
 		assertThat(result, notNullValue());
 		assertThat(result.getStatus(), equalTo(OPENMRS_NEW_TASK_STATUS));
 	}
-	
+
 	@Test
-	public void shouldSetOpenmrsTaskUUIDWhenNull() {
+	public void toOpenmrsType_shouldSetOpenmrsTaskUUIDWhenNull() {
 		FhirTask task = new FhirTask();
 		task.setUuid(null);
-		
+
 		Task fhirTask = taskTranslator.toFhirResource(task);
 		fhirTask.setId(TASK_UUID);
-		
+
 		FhirTask result = taskTranslator.toOpenmrsType(task, fhirTask);
-		
+
 		assertThat(result, notNullValue());
 		assertThat(result.getUuid(), equalTo(TASK_UUID));
 	}
-	
+
+	// Task.status
 	@Test
-	public void shouldUpdateStatusOnExistingTask() {
+	public void toFhirResource_shouldTranslateStatus() {
 		FhirTask task = new FhirTask();
 		task.setStatus(OPENMRS_TASK_STATUS);
-		task.setIntent(OPENMRS_TASK_INTENT);
+
+		Task result = taskTranslator.toFhirResource(task);
+
+		assertThat(result, notNullValue());
+		assertThat(result.getStatus(), equalTo(FHIR_TASK_STATUS));
+	}
+
+	@Test
+	public void toOpenmrsType_shouldTranslateStatus() {
+		Task task = new Task();
+		task.setStatus(FHIR_TASK_STATUS);
+
+		FhirTask result = taskTranslator.toOpenmrsType(task);
+
+		assertThat(result, notNullValue());
+		assertThat(result.getStatus(), equalTo(OPENMRS_TASK_STATUS));
+	}
+
+	@Test
+	public void toOpenmrsType_shouldUpdateStatusOnExistingTask() {
+		FhirTask task = new FhirTask();
+		task.setStatus(OPENMRS_TASK_STATUS);
 		task.setUuid(TASK_UUID);
-		
+
 		Task fhirTask = taskTranslator.toFhirResource(task);
 		fhirTask.setStatus(FHIR_NEW_TASK_STATUS);
-		
+
 		FhirTask result = taskTranslator.toOpenmrsType(task, fhirTask);
-		
+
 		assertThat(result, notNullValue());
 		assertThat(result.getStatus(), equalTo(OPENMRS_NEW_TASK_STATUS));
+	}
+
+	// Task.intent
+	@Test
+	public void toFhirResource_shouldTranslateIntent() {
+		FhirTask task = new FhirTask();
+		task.setIntent(OPENMRS_TASK_INTENT);
+
+		Task result = taskTranslator.toFhirResource(task);
+
+		assertThat(result, notNullValue());
+		assertThat(result.getIntent(), equalTo(FHIR_TASK_INTENT));
+	}
+
+	@Test
+	public void toOpenmrsType_shouldTranslateIntent() {
+		Task task = new Task();
+		task.setIntent(FHIR_TASK_INTENT);
+
+		FhirTask result = taskTranslator.toOpenmrsType(task);
+
+		assertThat(result, notNullValue());
 		assertThat(result.getIntent(), equalTo(OPENMRS_TASK_INTENT));
 	}
+
+	@Test
+	public void toOpenmrsType_shouldUpdateIntentOnExistingTask() {
+		FhirTask task = new FhirTask();
+		task.setIntent(OPENMRS_TASK_INTENT);
+		task.setUuid(TASK_UUID);
+
+		Task fhirTask = taskTranslator.toFhirResource(task);
+		fhirTask.setStatus(FHIR_NEW_TASK_STATUS);
+
+		FhirTask result = taskTranslator.toOpenmrsType(task, fhirTask);
+
+		assertThat(result, notNullValue());
+		assertThat(result.getIntent(), equalTo(OPENMRS_TASK_INTENT));
+	}
+
+	// Task.basedOn
+	@Test
+	public void toFhirResource_shouldTranslateBasedOn() {
+		FhirTask task = new FhirTask();
+
+		task.setBasedOnReferences(Collections.singletonList(FhirConstants.SERVICE_REQUEST+"/"+SERVICE_REQUEST_UUID));
+
+		Task result = taskTranslator.toFhirResource(task);
+
+		assertThat(result, notNullValue());
+		assertThat(result.getBasedOn(), not(empty()));
+		assertThat(result.getBasedOn().iterator().next().getType(), equalTo(FhirConstants.SERVICE_REQUEST));
+		assertThat(result.getBasedOn().iterator().next().getIdentifier().getValue(), equalTo(SERVICE_REQUEST_UUID));
+	}
+
+//	@Test
+//	public void toOpenmrsType_shouldTranslateBasedOn() {
+//		Task task = new Task();
+//		task.setIntent(FHIR_TASK_INTENT);
+//
+//		FhirTask result = taskTranslator.toOpenmrsType(task);
+//
+//		assertThat(result, notNullValue());
+//		assertThat(result.getIntent(), equalTo(OPENMRS_TASK_INTENT));
+//	}
+//
+//	@Test
+//	public void toOpenmrsType_shouldUpdateBasedOn() {
+//		FhirTask task = new FhirTask();
+//		task.setIntent(OPENMRS_TASK_INTENT);
+//		task.setUuid(TASK_UUID);
+//
+//		Task fhirTask = taskTranslator.toFhirResource(task);
+//		fhirTask.setStatus(FHIR_NEW_TASK_STATUS);
+//
+//		FhirTask result = taskTranslator.toOpenmrsType(task, fhirTask);
+//
+//		assertThat(result, notNullValue());
+//		assertThat(result.getIntent(), equalTo(OPENMRS_TASK_INTENT));
+//	}
+
+	// Task.encounter
+	@Test
+	public void toFhirResource_shouldTranslateEncounter() {
+		FhirTask task = new FhirTask();
+		task.setEncounterReference(FhirConstants.ENCOUNTER+"/"+ENCOUNTER_UUID);
+
+		Task result = taskTranslator.toFhirResource(task);
+
+		assertThat(result, notNullValue());
+		assertThat(result.getEncounter(), notNullValue());
+		assertThat(result.getEncounter().getType(), equalTo(FhirConstants.ENCOUNTER));
+		assertThat(result.getEncounter().getIdentifier().getValue(), equalTo(ENCOUNTER_UUID));
+	}
+
+	// Task.owner
+	@Test
+	public void toFhirResource_shouldTranslateOwner() {
+		FhirTask task = new FhirTask();
+		task.setOwnerReference(FhirConstants.ORGANIZATION+"/"+OPENELIS_ID);
+
+		Task result = taskTranslator.toFhirResource(task);
+
+		assertThat(result, notNullValue());
+		assertThat(result.getOwner(), notNullValue());
+		assertThat(result.getOwner().getType(), equalTo(FhirConstants.ORGANIZATION));
+		assertThat(result.getOwner().getIdentifier().getValue(), equalTo(OPENELIS_ID));
+	}
+
+	// Task.for
+	@Test
+	public void toFhirResource_shouldTranslateFor() {
+		FhirTask task = new FhirTask();
+		task.setForReference(FhirConstants.PATIENT+"/"+PATIENT_UUID);
+
+		Task result = taskTranslator.toFhirResource(task);
+
+		assertThat(result, notNullValue());
+		assertThat(result.getFor(), notNullValue());
+		assertThat(result.getFor().getType(), equalTo(FhirConstants.PATIENT));
+		assertThat(result.getFor().getIdentifier().getValue(), equalTo(PATIENT_UUID));
+	}
+
+	// Task.output
+	@Test
+	public void toFhirResource_shouldTranslateOutput() {
+		FhirTask task = new FhirTask();
+
+		task.setOutputReferences(Collections.singletonList(FhirConstants.DIAGNOSTIC_REPORT+"/"+DIAGNOSTIC_REPORT_UUID));
+
+		Task result = taskTranslator.toFhirResource(task);
+
+		assertThat(result, notNullValue());
+		assertThat(result.getOutput(), not(empty()));
+		assertThat(result.getOutput().iterator().next().getType().getText(), containsString(FhirConstants.DIAGNOSTIC_REPORT));
+
+		Reference outputVal = (Reference)result.getOutput().iterator().next().getValue();
+		assertThat(outputVal.getType(), equalTo(FhirConstants.DIAGNOSTIC_REPORT));
+		assertThat(outputVal.getIdentifier().getValue(), equalTo(DIAGNOSTIC_REPORT_UUID));
+	}
+
+//	@Test
+//	public void toOpenmrsType_shouldTranslateBasedOn() {
+//		Task task = new Task();
+//		task.setIntent(FHIR_TASK_INTENT);
+//
+//		FhirTask result = taskTranslator.toOpenmrsType(task);
+//
+//		assertThat(result, notNullValue());
+//		assertThat(result.getIntent(), equalTo(OPENMRS_TASK_INTENT));
+//	}
+//
+//	@Test
+//	public void toOpenmrsType_shouldUpdateBasedOn() {
+//		FhirTask task = new FhirTask();
+//		task.setIntent(OPENMRS_TASK_INTENT);
+//		task.setUuid(TASK_UUID);
+//
+//		Task fhirTask = taskTranslator.toFhirResource(task);
+//		fhirTask.setStatus(FHIR_NEW_TASK_STATUS);
+//
+//		FhirTask result = taskTranslator.toOpenmrsType(task, fhirTask);
+//
+//		assertThat(result, notNullValue());
+//		assertThat(result.getIntent(), equalTo(OPENMRS_TASK_INTENT));
+//	}
 }

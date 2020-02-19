@@ -11,15 +11,17 @@ package org.openmrs.module.fhir2.api.translators.impl;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 
 import java.util.Collections;
 
+import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.Reference;
-import org.hl7.fhir.r4.model.ServiceRequest;
 import org.hl7.fhir.r4.model.Task;
 import org.junit.Before;
 import org.junit.Test;
@@ -202,11 +204,11 @@ public class FhirTaskTranslatorImplTest {
 	@Test
 	public void toOpenmrsType_shouldUpdateIntentOnExistingTask() {
 		FhirTask task = new FhirTask();
-		task.setIntent(OPENMRS_TASK_INTENT);
+		task.setIntent(null);
 		task.setUuid(TASK_UUID);
 
 		Task fhirTask = taskTranslator.toFhirResource(task);
-		fhirTask.setStatus(FHIR_NEW_TASK_STATUS);
+		fhirTask.setIntent(FHIR_TASK_INTENT);
 
 		FhirTask result = taskTranslator.toOpenmrsType(task, fhirTask);
 
@@ -229,31 +231,42 @@ public class FhirTaskTranslatorImplTest {
 		assertThat(result.getBasedOn().iterator().next().getIdentifier().getValue(), equalTo(SERVICE_REQUEST_UUID));
 	}
 
-//	@Test
-//	public void toOpenmrsType_shouldTranslateBasedOn() {
-//		Task task = new Task();
-//		task.setIntent(FHIR_TASK_INTENT);
-//
-//		FhirTask result = taskTranslator.toOpenmrsType(task);
-//
-//		assertThat(result, notNullValue());
-//		assertThat(result.getIntent(), equalTo(OPENMRS_TASK_INTENT));
-//	}
-//
-//	@Test
-//	public void toOpenmrsType_shouldUpdateBasedOn() {
-//		FhirTask task = new FhirTask();
-//		task.setIntent(OPENMRS_TASK_INTENT);
-//		task.setUuid(TASK_UUID);
-//
-//		Task fhirTask = taskTranslator.toFhirResource(task);
-//		fhirTask.setStatus(FHIR_NEW_TASK_STATUS);
-//
-//		FhirTask result = taskTranslator.toOpenmrsType(task, fhirTask);
-//
-//		assertThat(result, notNullValue());
-//		assertThat(result.getIntent(), equalTo(OPENMRS_TASK_INTENT));
-//	}
+	@Test
+	public void toOpenmrsType_shouldTranslateBasedOn() {
+		Task task = new Task();
+		String refPath = FhirConstants.SERVICE_REQUEST+"/"+SERVICE_REQUEST_UUID;
+		task.setBasedOn(Collections.singletonList(new Reference()
+				.setReference(refPath)
+				.setType(FhirConstants.SERVICE_REQUEST)
+				.setIdentifier(new Identifier().setValue(SERVICE_REQUEST_UUID))));
+
+		FhirTask result = taskTranslator.toOpenmrsType(task);
+
+		assertThat(result.getBasedOnReferences(), notNullValue());
+		assertThat(result.getBasedOnReferences(), hasSize(1));
+		assertThat(result.getBasedOnReferences().iterator().next(), equalTo(refPath));
+	}
+
+	@Test
+	public void toOpenmrsType_shouldUpdateBasedOn() {
+		Task task = new Task();
+		String refPath = FhirConstants.SERVICE_REQUEST+"/"+SERVICE_REQUEST_UUID;
+		task.setBasedOn(Collections.singletonList(new Reference()
+				.setReference(refPath)
+				.setType(FhirConstants.SERVICE_REQUEST)
+				.setIdentifier(new Identifier().setValue(SERVICE_REQUEST_UUID))));
+
+		FhirTask openmrsTask = new FhirTask();
+		openmrsTask.setUuid(TASK_UUID);
+		openmrsTask.setBasedOnReferences(Collections.singletonList("<Some Reference String>"));
+
+		FhirTask result = taskTranslator.toOpenmrsType(openmrsTask, task);
+
+		assertThat(result.getUuid(), equalTo(TASK_UUID));
+		assertThat(result.getBasedOnReferences(), notNullValue());
+		assertThat(result.getBasedOnReferences(), hasSize(1));
+		assertThat(result.getBasedOnReferences().iterator().next(), equalTo(refPath));
+	}
 
 	// Task.encounter
 	@Test
@@ -267,6 +280,39 @@ public class FhirTaskTranslatorImplTest {
 		assertThat(result.getEncounter(), notNullValue());
 		assertThat(result.getEncounter().getType(), equalTo(FhirConstants.ENCOUNTER));
 		assertThat(result.getEncounter().getIdentifier().getValue(), equalTo(ENCOUNTER_UUID));
+	}
+
+	@Test
+	public void toOpenmrsType_shouldTranslateEncounter() {
+		Task task = new Task();
+		String refPath = FhirConstants.ENCOUNTER+"/"+ENCOUNTER_UUID;
+		task.setEncounter(new Reference().setReference(refPath)
+				.setType(FhirConstants.ENCOUNTER)
+				.setIdentifier(new Identifier().setValue(ENCOUNTER_UUID)));
+
+		FhirTask result = taskTranslator.toOpenmrsType(task);
+
+		assertThat(result.getEncounterReference(), notNullValue());
+		assertThat(result.getEncounterReference(), equalTo(refPath));
+	}
+
+	@Test
+	public void toOpenmrsType_shouldUpdateEncounter() {
+		Task task = new Task();
+		String refPath = FhirConstants.ENCOUNTER+"/"+ENCOUNTER_UUID;
+		task.setEncounter(new Reference().setReference(refPath)
+				.setType(FhirConstants.ENCOUNTER)
+				.setIdentifier(new Identifier().setValue(ENCOUNTER_UUID)));
+
+		FhirTask openmrsTask = new FhirTask();
+		openmrsTask.setUuid(TASK_UUID);
+		openmrsTask.setEncounterReference("<Some Reference String>");
+
+		FhirTask result = taskTranslator.toOpenmrsType(openmrsTask, task);
+
+		assertThat(result.getUuid(), equalTo(TASK_UUID));
+		assertThat(result.getEncounterReference(), notNullValue());
+		assertThat(result.getEncounterReference(), equalTo(refPath));
 	}
 
 	// Task.owner
@@ -283,6 +329,39 @@ public class FhirTaskTranslatorImplTest {
 		assertThat(result.getOwner().getIdentifier().getValue(), equalTo(OPENELIS_ID));
 	}
 
+	@Test
+	public void toOpenmrsType_shouldTranslateOwner() {
+		Task task = new Task();
+		String refPath = FhirConstants.ORGANIZATION+"/"+OPENELIS_ID;
+		task.setOwner(new Reference().setReference(refPath)
+				.setType(FhirConstants.ORGANIZATION)
+				.setIdentifier(new Identifier().setValue(OPENELIS_ID)));
+
+		FhirTask result = taskTranslator.toOpenmrsType(task);
+
+		assertThat(result.getOwnerReference(), notNullValue());
+		assertThat(result.getOwnerReference(), equalTo(refPath));
+	}
+
+	@Test
+	public void toOpenmrsType_shouldUpdateOwner() {
+		Task task = new Task();
+		String refPath = FhirConstants.ORGANIZATION+"/"+OPENELIS_ID;
+		task.setOwner(new Reference().setReference(refPath)
+				.setType(FhirConstants.ORGANIZATION)
+				.setIdentifier(new Identifier().setValue(OPENELIS_ID)));
+
+		FhirTask openmrsTask = new FhirTask();
+		openmrsTask.setUuid(TASK_UUID);
+		openmrsTask.setOwnerReference("<Some Reference String>");
+
+		FhirTask result = taskTranslator.toOpenmrsType(openmrsTask, task);
+
+		assertThat(result.getUuid(), equalTo(TASK_UUID));
+		assertThat(result.getOwnerReference(), notNullValue());
+		assertThat(result.getOwnerReference(), equalTo(refPath));
+	}
+
 	// Task.for
 	@Test
 	public void toFhirResource_shouldTranslateFor() {
@@ -295,6 +374,39 @@ public class FhirTaskTranslatorImplTest {
 		assertThat(result.getFor(), notNullValue());
 		assertThat(result.getFor().getType(), equalTo(FhirConstants.PATIENT));
 		assertThat(result.getFor().getIdentifier().getValue(), equalTo(PATIENT_UUID));
+	}
+
+	@Test
+	public void toOpenmrsType_shouldTranslateFor() {
+		Task task = new Task();
+		String refPath = FhirConstants.PATIENT+"/"+PATIENT_UUID;
+		task.setFor(new Reference().setReference(refPath)
+				.setType(FhirConstants.PATIENT)
+				.setIdentifier(new Identifier().setValue(PATIENT_UUID)));
+
+		FhirTask result = taskTranslator.toOpenmrsType(task);
+
+		assertThat(result.getForReference(), notNullValue());
+		assertThat(result.getForReference(), equalTo(refPath));
+	}
+
+	@Test
+	public void toOpenmrsType_shouldUpdateFor() {
+		Task task = new Task();
+		String refPath = FhirConstants.PATIENT+"/"+PATIENT_UUID;
+		task.setFor(new Reference().setReference(refPath)
+				.setType(FhirConstants.PATIENT)
+				.setIdentifier(new Identifier().setValue(PATIENT_UUID)));
+
+		FhirTask openmrsTask = new FhirTask();
+		openmrsTask.setUuid(TASK_UUID);
+		openmrsTask.setForReference("<Some Reference String>");
+
+		FhirTask result = taskTranslator.toOpenmrsType(openmrsTask, task);
+
+		assertThat(result.getUuid(), equalTo(TASK_UUID));
+		assertThat(result.getForReference(), notNullValue());
+		assertThat(result.getForReference(), equalTo(refPath));
 	}
 
 	// Task.output
@@ -315,29 +427,43 @@ public class FhirTaskTranslatorImplTest {
 		assertThat(outputVal.getIdentifier().getValue(), equalTo(DIAGNOSTIC_REPORT_UUID));
 	}
 
-//	@Test
-//	public void toOpenmrsType_shouldTranslateBasedOn() {
-//		Task task = new Task();
-//		task.setIntent(FHIR_TASK_INTENT);
-//
-//		FhirTask result = taskTranslator.toOpenmrsType(task);
-//
-//		assertThat(result, notNullValue());
-//		assertThat(result.getIntent(), equalTo(OPENMRS_TASK_INTENT));
-//	}
-//
-//	@Test
-//	public void toOpenmrsType_shouldUpdateBasedOn() {
-//		FhirTask task = new FhirTask();
-//		task.setIntent(OPENMRS_TASK_INTENT);
-//		task.setUuid(TASK_UUID);
-//
-//		Task fhirTask = taskTranslator.toFhirResource(task);
-//		fhirTask.setStatus(FHIR_NEW_TASK_STATUS);
-//
-//		FhirTask result = taskTranslator.toOpenmrsType(task, fhirTask);
-//
-//		assertThat(result, notNullValue());
-//		assertThat(result.getIntent(), equalTo(OPENMRS_TASK_INTENT));
-//	}
+	@Test
+	public void toOpenmrsType_shouldTranslateOutput() {
+		Task task = new Task();
+		String refPath = FhirConstants.DIAGNOSTIC_REPORT+"/"+DIAGNOSTIC_REPORT_UUID;
+		Reference ref = new Reference().setReference(refPath)
+				.setType(FhirConstants.DIAGNOSTIC_REPORT)
+				.setIdentifier(new Identifier().setValue(DIAGNOSTIC_REPORT_UUID));
+
+		task.setOutput(Collections.singletonList(new Task.TaskOutputComponent().setValue(ref)
+				.setType(new CodeableConcept().setText(FhirConstants.DIAGNOSTIC_REPORT+" generated"))));
+
+		FhirTask result = taskTranslator.toOpenmrsType(task);
+
+		assertThat(result.getOutputReferences(), notNullValue());
+		assertThat(result.getOutputReferences(), hasSize(1));
+		assertThat(result.getOutputReferences().iterator().next(), equalTo(refPath));
+	}
+
+	@Test
+	public void toOpenmrsType_shouldUpdateOutput() {
+		Task task = new Task();
+		String refPath = FhirConstants.DIAGNOSTIC_REPORT+"/"+DIAGNOSTIC_REPORT_UUID;
+		Reference ref = new Reference().setReference(refPath)
+				.setType(FhirConstants.DIAGNOSTIC_REPORT)
+				.setIdentifier(new Identifier().setValue(DIAGNOSTIC_REPORT_UUID));
+		task.setOutput(Collections.singletonList(new Task.TaskOutputComponent().setValue(ref)
+				.setType(new CodeableConcept().setText(FhirConstants.DIAGNOSTIC_REPORT+" generated"))));
+
+		FhirTask openmrsTask = new FhirTask();
+		openmrsTask.setUuid(TASK_UUID);
+		openmrsTask.setOutputReferences(Collections.singletonList("<Some Reference String>"));
+
+		FhirTask result = taskTranslator.toOpenmrsType(openmrsTask, task);
+
+		assertThat(result.getUuid(), equalTo(TASK_UUID));
+		assertThat(result.getOutputReferences(), notNullValue());
+		assertThat(result.getOutputReferences(), hasSize(1));
+		assertThat(result.getOutputReferences().iterator().next(), equalTo(refPath));
+	}
 }

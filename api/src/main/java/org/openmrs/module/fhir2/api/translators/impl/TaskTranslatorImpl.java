@@ -9,8 +9,6 @@
  */
 package org.openmrs.module.fhir2.api.translators.impl;
 
-import java.util.Collection;
-import java.util.Collections;
 import java.util.stream.Collectors;
 
 import lombok.AccessLevel;
@@ -103,6 +101,26 @@ public class TaskTranslatorImpl implements TaskTranslator {
 		if (fhirTask.getIntent() != null) {
 			openmrsTask.setIntent(FhirTask.TaskIntent.valueOf(fhirTask.getIntent().name()));
 		}
+
+		if (fhirTask.getBasedOn() != null) {
+			openmrsTask.setBasedOnReferences(fhirTask.getBasedOn().stream().map(this::translateToStringReference).collect(Collectors.toList()));
+		}
+
+		if (fhirTask.getEncounter() != null) {
+			openmrsTask.setEncounterReference(translateToStringReference(fhirTask.getEncounter()));
+		}
+
+		if (fhirTask.getFor() != null) {
+			openmrsTask.setForReference(translateToStringReference(fhirTask.getFor()));
+		}
+
+		if (fhirTask.getOwner() != null) {
+			openmrsTask.setOwnerReference(translateToStringReference(fhirTask.getOwner()));
+		}
+
+		if (fhirTask.getOutput() != null) {
+			openmrsTask.setOutputReferences(fhirTask.getOutput().stream().map(this::translateToOutputReferences).collect(Collectors.toList()));
+		}
 	}
 
 	private Reference translateFromStringReference(String stringRef) {
@@ -112,8 +130,25 @@ public class TaskTranslatorImpl implements TaskTranslator {
 				.setType(splitRef[0]).setIdentifier(new Identifier().setValue(splitRef[1]));
 	}
 
-	private Task.TaskOutputComponent translateOutputReferences(String refString) {
+	private String translateToStringReference(Reference reference) {
+		if (reference.getReference() != null) {
+			return reference.getReference();
+		}
+
+		if (reference.getType() != null && reference.getIdentifier().getValue() != null) {
+			return reference.getType()+"/"+reference.getIdentifier();
+		}
+
+		return null;
+	}
+
+	private Task.TaskOutputComponent translateFromOutputReferences(String refString) {
 		Reference ref = translateFromStringReference(refString);
 		return new Task.TaskOutputComponent().setType(new CodeableConcept().setText(ref.getType()+" generated")).setValue(ref);
 	}
+
+	private String translateToOutputReferences(Task.TaskOutputComponent taskOutputComponent) {
+		return translateToStringReference((Reference) taskOutputComponent.getValue());
+	}
+
 }

@@ -21,21 +21,29 @@ import static org.mockito.Mockito.when;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Period;
 import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.ServiceRequest;
 import org.hl7.fhir.r4.model.Task;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.openmrs.Concept;
+import org.openmrs.Order;
 import org.openmrs.Patient;
 import org.openmrs.Provider;
 import org.openmrs.TestOrder;
+import org.openmrs.api.ObsService;
+import org.openmrs.api.OrderService;
+import org.openmrs.api.impl.ObsServiceImpl;
+import org.openmrs.api.impl.OrderServiceImpl;
 import org.openmrs.module.fhir2.FhirConstants;
 import org.openmrs.module.fhir2.FhirTestConstants;
 import org.openmrs.module.fhir2.api.FhirTaskService;
@@ -224,6 +232,39 @@ public class ServiceRequestTranslatorImplTest {
 		assertThat(result.getCoding(), notNullValue());
 		assertThat(result.getCoding(), hasItem(hasProperty("system", equalTo(FhirTestConstants.LOINC_SYSTEM_URL))));
 		assertThat(result.getCoding(), hasItem(hasProperty("code", equalTo(LOINC_CODE))));
+	}
+
+	@Test
+	public void toFhirResource_shouldTranslateOccurrence() {
+		TestOrder testOrder = new TestOrder();
+		Date fromDate = new Date();
+		Date toDate = new Date();
+
+		testOrder.setDateActivated(fromDate);
+		testOrder.setAutoExpireDate(toDate);
+
+		Period result = translator.toFhirResource(testOrder).getOccurrencePeriod();
+
+		assertThat(result, notNullValue());
+		assertThat(result.getStart(), equalTo(fromDate));
+		assertThat(result.getEnd(), equalTo(toDate));
+	}
+
+	@Test
+	public void toFhirResource_shouldTranslateOccurrenceFromScheduled() {
+		TestOrder testOrder = new TestOrder();
+		Date fromDate = new Date();
+		Date toDate = new Date();
+
+		testOrder.setUrgency(TestOrder.Urgency.ON_SCHEDULED_DATE);
+		testOrder.setScheduledDate(fromDate);
+		testOrder.setAutoExpireDate(toDate);
+
+		Period result = translator.toFhirResource(testOrder).getOccurrencePeriod();
+
+		assertThat(result, notNullValue());
+		assertThat(result.getStart(), equalTo(fromDate));
+		assertThat(result.getEnd(), equalTo(toDate));
 	}
 
 	@Test

@@ -18,6 +18,7 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 
 import java.util.Collections;
+import java.util.Date;
 
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Identifier;
@@ -454,4 +455,33 @@ public class FhirTaskTranslatorImplTest {
 		assertThat(result.getOutputReferences(), hasSize(1));
 		assertThat(result.getOutputReferences().iterator().next(), equalTo(refPath));
 	}
+
+	// Task.authoredOn
+	@Test
+	public void toFhirResource_shouldTranslateAuthoredOn() {
+		FhirTask task = new FhirTask();
+		Date createdDate = new Date();
+
+		task.setDateCreated(createdDate);
+
+		Task result = taskTranslator.toFhirResource(task);
+
+		assertThat(result, notNullValue());
+		assertThat(result.getAuthoredOn(), equalTo(createdDate));
+	}
+
+	// Task.lastModified
+	@Test
+	public void toFhirResource_shouldTranslateLastModified() {
+		FhirTask task = new FhirTask();
+		Date dateModified = new Date();
+
+		task.setDateChanged(dateModified);
+
+		Task result = taskTranslator.toFhirResource(task);
+
+		assertThat(result, notNullValue());
+		assertThat(result.getLastModified(), equalTo(dateModified));
+	}
 }
+

@@ -15,6 +15,7 @@ import java.util.Collections;
 
 import lombok.AccessLevel;
 import lombok.Setter;
+import org.hl7.fhir.r4.model.Period;
 import org.hl7.fhir.r4.model.ServiceRequest;
 import org.openmrs.TestOrder;
 import org.openmrs.module.fhir2.api.translators.ConceptTranslator;
@@ -57,6 +58,8 @@ public class ServiceRequestTranslatorImpl extends BaseServiceRequestTranslatorIm
 		serviceRequest.setRequester(practitionerReferenceTranslator.toFhirResource(order.getOrderer()));
 
 		serviceRequest.setPerformer(Collections.singletonList(determineServiceRequestPerformer(order.getUuid())));
+
+		serviceRequest.setOccurrence(new Period().setStart(order.getEffectiveStartDate()).setEnd(order.getEffectiveStopDate()));
 
 		return serviceRequest;
 	}

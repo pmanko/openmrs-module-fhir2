@@ -90,6 +90,10 @@ public class TaskTranslatorImpl implements TaskTranslator {
 			fhirTask.setOutput(openmrsTask.getOutputReferences().stream().map(this::translateFromOutputReferences)
 			        .collect(Collectors.toList()));
 		}
+
+		fhirTask.setAuthoredOn(openmrsTask.getDateCreated());
+
+		fhirTask.setLastModified(openmrsTask.getDateChanged());
 	}
 	
 	private void setOpenmrsTaskFields(FhirTask openmrsTask, Task fhirTask) {

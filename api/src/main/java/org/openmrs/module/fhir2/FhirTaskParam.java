@@ -28,7 +28,6 @@ import org.openmrs.Concept;
 @EqualsAndHashCode(callSuper = true)
 @MappedSuperclass
 public abstract class FhirTaskParam extends BaseOpenmrsData {
-	
 	@OneToOne
 	@JoinColumn(name = "task_id")
 	protected FhirTask task;

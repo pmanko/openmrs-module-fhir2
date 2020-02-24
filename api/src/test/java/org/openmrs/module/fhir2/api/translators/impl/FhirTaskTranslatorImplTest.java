@@ -247,7 +247,6 @@ public class FhirTaskTranslatorImplTest {
 		    task::setBasedOnReferences, t -> t.getBasedOn());
 	}
 	
-	// TODO: refactor
 	@Test
 	public void toOpenmrsType_shouldTranslateBasedOn() {
 		Task task = new Task();
@@ -256,30 +255,12 @@ public class FhirTaskTranslatorImplTest {
 				task::setBasedOn, t -> t.getBasedOnReferences());
 	}
 	
-	// TODO: refactor
 	@Test
 	public void toOpenmrsType_shouldUpdateBasedOn() {
 		Task task = new Task();
-		FhirTask openmrsTask = new FhirTask();
-		FhirReference openmrsBasedOn = new FhirReference();
-		
-		Reference basedOn = new Reference().setType(FhirConstants.SERVICE_REQUEST).setReference(SERVICE_REQUEST_UUID);
-		task.setBasedOn(Collections.singletonList(basedOn));
-		
-		openmrsTask.setUuid(TASK_UUID);
-		openmrsBasedOn.setReference(SERVICE_REQUEST_UUID);
-		openmrsBasedOn.setType(FhirConstants.SERVICE_REQUEST);
-		openmrsTask.setBasedOnReferences(Collections.singletonList(openmrsBasedOn));
-		
-		when(referenceTranslator.toOpenmrsType(basedOn)).thenReturn(openmrsBasedOn);
-		
-		FhirTask result = taskTranslator.toOpenmrsType(openmrsTask, task);
-		
-		assertThat(result.getUuid(), equalTo(TASK_UUID));
-		assertThat(result.getBasedOnReferences(), notNullValue());
-		assertThat(result.getBasedOnReferences(), hasSize(1));
-		assertThat(result.getBasedOnReferences().iterator().next().getType(), equalTo(FhirConstants.SERVICE_REQUEST));
-		assertThat(result.getBasedOnReferences().iterator().next().getReference(), equalTo(SERVICE_REQUEST_UUID));
+
+		shouldUpdateReferenceListInOpenmrs(task, FhirConstants.SERVICE_REQUEST, SERVICE_REQUEST_UUID,
+				task::setBasedOn, t -> t.getBasedOnReferences());
 	}
 	
 	// Task.encounter
@@ -380,44 +361,54 @@ public class FhirTaskTranslatorImplTest {
 		assertThat(result.getOutput().iterator().next().getType().getCoding().iterator().next().getCode(),
 		    equalTo(CONCEPT_UUID));
 	}
-	//
-	//	@Test
-	//	public void toOpenmrsType_shouldTranslateOutput() {
-	//		Task task = new Task();
-	//		String refPath = FhirConstants.DIAGNOSTIC_REPORT + "/" + DIAGNOSTIC_REPORT_UUID;
-	//		Reference ref = new Reference().setReference(refPath).setType(FhirConstants.DIAGNOSTIC_REPORT)
-	//		        .setIdentifier(new Identifier().setValue(DIAGNOSTIC_REPORT_UUID));
-	//
-	//		task.setOutput(Collections.singletonList(new Task.TaskOutputComponent().setValue(ref)
-	//		        .setType(new CodeableConcept().setText(FhirConstants.DIAGNOSTIC_REPORT + " generated"))));
-	//
-	//		FhirTask result = taskTranslator.toOpenmrsType(task);
-	//
-	//		assertThat(result.getOutputReferences(), notNullValue());
-	//		assertThat(result.getOutputReferences(), hasSize(1));
-	//		assertThat(result.getOutputReferences().iterator().next(), equalTo(refPath));
-	//	}
-	//
-	//	@Test
-	//	public void toOpenmrsType_shouldUpdateOutput() {
-	//		Task task = new Task();
-	//		String refPath = FhirConstants.DIAGNOSTIC_REPORT + "/" + DIAGNOSTIC_REPORT_UUID;
-	//		Reference ref = new Reference().setReference(refPath).setType(FhirConstants.DIAGNOSTIC_REPORT)
-	//		        .setIdentifier(new Identifier().setValue(DIAGNOSTIC_REPORT_UUID));
-	//		task.setOutput(Collections.singletonList(new Task.TaskOutputComponent().setValue(ref)
-	//		        .setType(new CodeableConcept().setText(FhirConstants.DIAGNOSTIC_REPORT + " generated"))));
-	//
-	//		FhirTask openmrsTask = new FhirTask();
-	//		openmrsTask.setUuid(TASK_UUID);
-	//		openmrsTask.setOutputReferences(Collections.singletonList("<Some Reference String>"));
-	//
-	//		FhirTask result = taskTranslator.toOpenmrsType(openmrsTask, task);
-	//
-	//		assertThat(result.getUuid(), equalTo(TASK_UUID));
-	//		assertThat(result.getOutputReferences(), notNullValue());
-	//		assertThat(result.getOutputReferences(), hasSize(1));
-	//		assertThat(result.getOutputReferences().iterator().next(), equalTo(refPath));
-	//	}
+
+	@Test
+	public void toOpenmrsType_shouldTranslateOutputReference() {
+		Task task = new Task();
+		Task.TaskOutputComponent output = new Task.TaskOutputComponent();
+		Reference outputReference = new Reference().setReference(DIAGNOSTIC_REPORT_UUID).setType(FhirConstants.DIAGNOSTIC_REPORT);
+		CodeableConcept outputType =  new CodeableConcept().setText("some text");
+		Concept openmrsOutputType = new Concept();
+		openmrsOutputType.setUuid(CONCEPT_UUID);
+
+		output.setType(outputType).setValue(outputReference);
+
+		task.setOutput(Collections.singletonList(output));
+
+		when(conceptTranslator.toOpenmrsType(outputType)).thenReturn(openmrsOutputType);
+
+		FhirTask result = shouldTranslateReferenceToOpenmrs(task, FhirConstants.DIAGNOSTIC_REPORT, DIAGNOSTIC_REPORT_UUID,
+				output::setValue, t->t.getOutput().iterator().next().getValueReference());
+
+		assertThat(result.getOutput(), hasSize(1));
+		assertThat(result.getOutput().iterator().next().getType().getUuid(), equalTo(CONCEPT_UUID));
+	}
+
+	@Test
+	public void toOpenmrsType_shouldUpdateOutputReference() {
+		Task task = new Task();
+		Task.TaskOutputComponent output = new Task.TaskOutputComponent();
+		Reference outputReference = new Reference().setReference(DIAGNOSTIC_REPORT_UUID).setType(FhirConstants.DIAGNOSTIC_REPORT);
+		CodeableConcept outputType = new CodeableConcept().setText("some text");
+		output.setType(outputType).setValue(outputReference);
+		Concept openmrsOutputType = new Concept();
+		openmrsOutputType.setUuid(CONCEPT_UUID);
+
+		task.setOutput(Collections.singletonList(output));
+
+		FhirTask openmrsTask = new FhirTask();
+		openmrsTask.setUuid(TASK_UUID);
+		openmrsTask.setOutput(Collections.singletonList(new FhirTaskOutput()));
+
+		when(conceptTranslator.toOpenmrsType(outputType)).thenReturn(openmrsOutputType);
+
+		FhirTask result = shouldUpdateReferenceInOpenmrs(task, FhirConstants.DIAGNOSTIC_REPORT, DIAGNOSTIC_REPORT_UUID,
+				output::setValue, t->t.getOutput().iterator().next().getValueReference());
+
+		assertThat(result.getOutput(), hasSize(1));
+		assertThat(result.getOutput().iterator().next().getType().getUuid(), equalTo(CONCEPT_UUID));
+
+	}
 	
 	// Task.input
 	@Test
@@ -591,7 +582,7 @@ public class FhirTaskTranslatorImplTest {
 	}
 
 	private FhirTask shouldUpdateReferenceListInOpenmrs(Task task, String refType, String refUuid,
-			Consumer<Collection<Reference>> setFhirReference, Function<FhirTask, Collection<FhirReference>> getOpenmrsReference) {
+			Consumer<List<Reference>> setFhirReference, Function<FhirTask, Collection<FhirReference>> getOpenmrsReference) {
 
 		Reference fhirReference = new Reference().setReference(refUuid).setType(refType);
 		setFhirReference.accept(Collections.singletonList(fhirReference));
@@ -606,7 +597,7 @@ public class FhirTaskTranslatorImplTest {
 
 		when(referenceTranslator.toOpenmrsType(any(Reference.class))).thenReturn(openmrsReference);
 
-		FhirTask result = taskTranslator.toOpenmrsType(task);
+		FhirTask result = taskTranslator.toOpenmrsType(openmrsTask, task);
 		Collection<FhirReference> resultReference = getOpenmrsReference.apply(result);
 
 		assertThat(resultReference, notNullValue());

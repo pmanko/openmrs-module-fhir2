@@ -19,6 +19,8 @@ import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.Task;
+import org.openmrs.Concept;
+import org.openmrs.module.fhir2.FhirReference;
 import org.openmrs.module.fhir2.FhirTask;
 import org.openmrs.module.fhir2.FhirTaskInput;
 import org.openmrs.module.fhir2.FhirTaskOutput;
@@ -140,8 +142,41 @@ public class TaskTranslatorImpl implements TaskTranslator {
 		if (fhirTask.getOwner() != null) {
 			openmrsTask.setOwnerReference(referenceTranslator.toOpenmrsType(fhirTask.getOwner()));
 		}
+
+		if (fhirTask.getInput() != null) {
+			openmrsTask.setInput(fhirTask.getInput().stream().map(this::translateToInputText).collect(Collectors.toList()));
+		}
+
+		if (fhirTask.getOutput() != null) {
+			openmrsTask.setOutput(fhirTask.getOutput().stream().map(this::translateToOutputReference).collect(Collectors.toList()));
+		}
+
+		openmrsTask.setDateCreated(fhirTask.getAuthoredOn());
+
+		openmrsTask.setDateCreated(fhirTask.getLastModified());
 	}
-	
+
+	private FhirTaskOutput translateToOutputReference(Task.TaskOutputComponent taskOutputComponent) {
+		FhirReference outputReference = referenceTranslator.toOpenmrsType((Reference) taskOutputComponent.getValue());
+		Concept type = conceptTranslator.toOpenmrsType(taskOutputComponent.getType());
+		FhirTaskOutput output = new FhirTaskOutput();
+
+		output.setValueReference(outputReference);
+		output.setType(type);
+
+		return output;
+	}
+
+	private FhirTaskInput translateToInputText(Task.ParameterComponent parameterComponent) {
+		Concept type = conceptTranslator.toOpenmrsType(parameterComponent.getType());
+		FhirTaskInput input = new FhirTaskInput();
+
+		input.setType(type);
+		input.setValueText(parameterComponent.getValue().toString());
+
+		return input;
+	}
+
 	private Task.TaskOutputComponent translateFromOutputReferences(FhirTaskOutput openmrsOutput) {
 		Reference ref = referenceTranslator.toFhirResource(openmrsOutput.getValueReference());
 		CodeableConcept type = conceptTranslator.toFhirResource(openmrsOutput.getType());

@@ -20,6 +20,7 @@ import static org.mockito.Mockito.when;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -250,21 +251,9 @@ public class FhirTaskTranslatorImplTest {
 	@Test
 	public void toOpenmrsType_shouldTranslateBasedOn() {
 		Task task = new Task();
-		Reference basedOn = new Reference().setType(FhirConstants.SERVICE_REQUEST).setReference(SERVICE_REQUEST_UUID);
-		task.setBasedOn(Collections.singletonList(basedOn));
-		
-		FhirReference openmrsBasedOn = new FhirReference();
-		openmrsBasedOn.setReference(SERVICE_REQUEST_UUID);
-		openmrsBasedOn.setType(FhirConstants.SERVICE_REQUEST);
-		
-		when(referenceTranslator.toOpenmrsType(basedOn)).thenReturn(openmrsBasedOn);
-		
-		FhirTask result = taskTranslator.toOpenmrsType(task);
-		
-		assertThat(result.getBasedOnReferences(), notNullValue());
-		assertThat(result.getBasedOnReferences(), hasSize(1));
-		assertThat(result.getBasedOnReferences().iterator().next().getType(), equalTo(FhirConstants.SERVICE_REQUEST));
-		assertThat(result.getBasedOnReferences().iterator().next().getReference(), equalTo(SERVICE_REQUEST_UUID));
+
+		shouldTranslateReferenceListToOpenmrs(task, FhirConstants.SERVICE_REQUEST, SERVICE_REQUEST_UUID,
+				task::setBasedOn, t -> t.getBasedOnReferences());
 	}
 	
 	// TODO: refactor
@@ -483,8 +472,10 @@ public class FhirTaskTranslatorImplTest {
 		assertThat(result, notNullValue());
 		assertThat(result.getLastModified(), equalTo(dateModified));
 	}
-	
-	// Helpers
+
+	/**
+	 * Helpers for reference associations
+ 	 */
 	private Task shouldTranslateReferenceToFhir(FhirTask task, String refType, String refUuid,
 	        Consumer<FhirReference> setOpenmrsReference, Function<Task, Reference> getFhirReference) {
 		FhirReference openmrsReference = new FhirReference();
@@ -527,7 +518,7 @@ public class FhirTaskTranslatorImplTest {
 		return result;
 	}
 	
-	private void shouldUpdateReferenceInOpenmrs(Task task, String refType, String refUuid,
+	private FhirTask shouldUpdateReferenceInOpenmrs(Task task, String refType, String refUuid,
 	        Consumer<Reference> setFhirReference, Function<FhirTask, FhirReference> getOpenmrsReference) {
 		Reference fhirReference = new Reference().setReference(refUuid).setType(refType);
 		setFhirReference.accept(fhirReference);
@@ -541,15 +532,18 @@ public class FhirTaskTranslatorImplTest {
 		openmrsTask.setEncounterReference(new FhirReference());
 		
 		when(referenceTranslator.toOpenmrsType(any(Reference.class))).thenReturn(openmrsReference);
-		
-		FhirReference result = getOpenmrsReference.apply(taskTranslator.toOpenmrsType(openmrsTask, task));
-		
-		assertThat(result, notNullValue());
-		assertThat(result.getReference(), equalTo(refUuid));
-		assertThat(result.getType(), equalTo(refType));
+
+		FhirTask result = taskTranslator.toOpenmrsType(openmrsTask, task);
+		FhirReference resultReference = getOpenmrsReference.apply(result);
+
+		assertThat(resultReference, notNullValue());
+		assertThat(resultReference.getReference(), equalTo(refUuid));
+		assertThat(resultReference.getType(), equalTo(refType));
+
+		return result;
 	}
 	
-	private void shouldTranslateReferenceListToFhir(FhirTask task, String refType, String refUuid,
+	private Task shouldTranslateReferenceListToFhir(FhirTask task, String refType, String refUuid,
 	        Consumer<Collection<FhirReference>> setOpenmrsReference,
 	        Function<Task, Collection<Reference>> getFhirReference) {
 		FhirReference openmrsReference = new FhirReference();
@@ -560,14 +554,67 @@ public class FhirTaskTranslatorImplTest {
 		Reference fhirReference = new Reference().setReference(refUuid).setType(refType);
 		
 		when(referenceTranslator.toFhirResource(any(FhirReference.class))).thenReturn(fhirReference);
+
+		Task result = taskTranslator.toFhirResource(task);
+		Collection<Reference> resultReference = getFhirReference.apply(result);
 		
-		Collection<Reference> result = getFhirReference.apply(taskTranslator.toFhirResource(task));
-		
-		assertThat(result, notNullValue());
-		assertThat(result, hasSize(1));
-		assertThat(result.iterator().next(), notNullValue());
-		assertThat(result.iterator().next().getType(), equalTo(refType));
-		assertThat(result.iterator().next().getReference(), equalTo(refUuid));
+		assertThat(resultReference, notNullValue());
+		assertThat(resultReference, hasSize(1));
+		assertThat(resultReference.iterator().next(), notNullValue());
+		assertThat(resultReference.iterator().next().getType(), equalTo(refType));
+		assertThat(resultReference.iterator().next().getReference(), equalTo(refUuid));
+
+		return result;
 	}
-	
+
+	private FhirTask shouldTranslateReferenceListToOpenmrs(Task task, String refType, String refUuid,
+			Consumer<List<Reference>> setFhirReference, Function<FhirTask, Collection<FhirReference>> getOpenmrsReference) {
+
+		Reference fhirReference = new Reference().setReference(refUuid).setType(refType);
+		setFhirReference.accept(Collections.singletonList(fhirReference));
+
+		FhirReference openmrsReference = new FhirReference();
+		openmrsReference.setReference(refUuid);
+		openmrsReference.setType(refType);
+
+		when(referenceTranslator.toOpenmrsType(any(Reference.class))).thenReturn(openmrsReference);
+
+		FhirTask result = taskTranslator.toOpenmrsType(task);
+		Collection<FhirReference> resultReference = getOpenmrsReference.apply(result);
+
+		assertThat(resultReference, notNullValue());
+		assertThat(resultReference, hasSize(1));
+		assertThat(resultReference.iterator().next().getReference(), equalTo(refUuid));
+		assertThat(resultReference.iterator().next().getType(), equalTo(refType));
+
+		return result;
+	}
+
+	private FhirTask shouldUpdateReferenceListInOpenmrs(Task task, String refType, String refUuid,
+			Consumer<Collection<Reference>> setFhirReference, Function<FhirTask, Collection<FhirReference>> getOpenmrsReference) {
+
+		Reference fhirReference = new Reference().setReference(refUuid).setType(refType);
+		setFhirReference.accept(Collections.singletonList(fhirReference));
+
+		FhirReference openmrsReference = new FhirReference();
+		openmrsReference.setReference(refUuid);
+		openmrsReference.setType(refType);
+
+		FhirTask openmrsTask = new FhirTask();
+		openmrsTask.setUuid(TASK_UUID);
+		openmrsTask.setEncounterReference(new FhirReference());
+
+		when(referenceTranslator.toOpenmrsType(any(Reference.class))).thenReturn(openmrsReference);
+
+		FhirTask result = taskTranslator.toOpenmrsType(task);
+		Collection<FhirReference> resultReference = getOpenmrsReference.apply(result);
+
+		assertThat(resultReference, notNullValue());
+		assertThat(resultReference, hasSize(1));
+		assertThat(resultReference.iterator().next().getReference(), equalTo(refUuid));
+		assertThat(resultReference.iterator().next().getType(), equalTo(refType));
+
+		return result;
+	}
+
 }

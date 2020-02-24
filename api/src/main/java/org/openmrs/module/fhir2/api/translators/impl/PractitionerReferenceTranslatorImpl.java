@@ -28,14 +28,14 @@ public class PractitionerReferenceTranslatorImpl extends AbstractReferenceHandli
 	private FhirPractitionerDao practitionerDao;
 	
 	@Override
-	public Reference toFhirResource(Provider provider) {
-		if (provider == null) {
+	public Reference toFhirResource(Object userOrProvider) {
+		if (userOrProvider == null) {
 			return null;
 		}
 		
-		return createPractitionerReference(provider);
+		return createPractitionerReference((Provider)userOrProvider);
 	}
-	
+
 	@Override
 	public Provider toOpenmrsType(Reference practitioner) {
 		if (practitioner == null) {
@@ -52,5 +52,10 @@ public class PractitionerReferenceTranslatorImpl extends AbstractReferenceHandli
 		}
 		
 		return practitionerDao.getProviderByUuid(uuid);
+	}
+
+	@Override
+	public Object toOpenmrsType(Object resource) {
+		return null;
 	}
 }

@@ -30,13 +30,13 @@ public class ServiceRequestTranslatorImpl extends BaseServiceRequestTranslatorIm
 	
 	@Inject
 	private ConceptTranslator conceptTranslator;
-
+	
 	@Inject
 	private PatientReferenceTranslator patientReferenceTranslator;
-
+	
 	@Inject
 	private PractitionerReferenceTranslator practitionerReferenceTranslator;
-
+	
 	@Override
 	public ServiceRequest toFhirResource(TestOrder order) {
 		if (order == null) {
@@ -46,21 +46,22 @@ public class ServiceRequestTranslatorImpl extends BaseServiceRequestTranslatorIm
 		ServiceRequest serviceRequest = new ServiceRequest();
 		
 		serviceRequest.setId(order.getUuid());
-
+		
 		serviceRequest.setStatus(determineServiceRequestStatus(order.getUuid()));
-
+		
 		serviceRequest.setCode(conceptTranslator.toFhirResource(order.getConcept()));
-
+		
 		serviceRequest.setIntent(ServiceRequest.ServiceRequestIntent.ORDER);
-
+		
 		serviceRequest.setSubject(patientReferenceTranslator.toFhirResource(order.getPatient()));
-
+		
 		serviceRequest.setRequester(practitionerReferenceTranslator.toFhirResource(order.getOrderer()));
-
+		
 		serviceRequest.setPerformer(Collections.singletonList(determineServiceRequestPerformer(order.getUuid())));
-
-		serviceRequest.setOccurrence(new Period().setStart(order.getEffectiveStartDate()).setEnd(order.getEffectiveStopDate()));
-
+		
+		serviceRequest
+		        .setOccurrence(new Period().setStart(order.getEffectiveStartDate()).setEnd(order.getEffectiveStopDate()));
+		
 		return serviceRequest;
 	}
 }

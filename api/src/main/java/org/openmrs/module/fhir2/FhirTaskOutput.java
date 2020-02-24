@@ -15,13 +15,10 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
-import java.util.Date;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.openmrs.BaseOpenmrsData;
-import org.openmrs.Concept;
 
 /**
  * FHIR Task.input - https://www.hl7.org/fhir/task-definitions.html#Task.input
@@ -32,18 +29,20 @@ import org.openmrs.Concept;
 @Entity
 @Table(name = "fhir_task_input")
 public class FhirTaskOutput extends FhirTaskParam {
+	
 	private static final long serialVersionUID = 1L;
 	
 	@Id
 	@GeneratedValue(strategy = GenerationType.AUTO)
 	@Column(name = "task_output_id")
 	private Integer id;
-
+	
 	/**
 	 * FhirTaskOutput.type: The name of the Output parameter..
 	 */
-
+	
 	/**
-	 * FhirTaskInput.value: The value of the output parameter as a basic type (https://www.hl7.org/fhir/datatypes.html#open).
+	 * FhirTaskInput.value: The value of the output parameter as a basic type
+	 * (https://www.hl7.org/fhir/datatypes.html#open).
 	 */
 }

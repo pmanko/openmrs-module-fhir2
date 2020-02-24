@@ -9,58 +9,52 @@
  */
 package org.openmrs.module.fhir2.api.translators.impl;
 
-import java.util.stream.Collectors;
-
 import lombok.AccessLevel;
 import lombok.Setter;
-import org.hl7.fhir.r4.model.CodeableConcept;
-import org.hl7.fhir.r4.model.Identifier;
-import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.Reference;
 import org.openmrs.module.fhir2.FhirReference;
 import org.openmrs.module.fhir2.api.translators.ReferenceTranslator;
-import org.openmrs.module.fhir2.api.translators.TaskTranslator;
 import org.springframework.stereotype.Component;
 
 @Component
 @Setter(AccessLevel.PACKAGE)
 public class ReferenceTranslatorImpl implements ReferenceTranslator {
-
+	
 	@Override
 	public Reference toFhirResource(FhirReference openmrsTask) {
 		Reference fhirReference = new Reference();
-
-		if(openmrsTask != null) {
+		
+		if (openmrsTask != null) {
 			fhirReference.setType(openmrsTask.getType());
 			fhirReference.setReference(openmrsTask.getReference());
 		}
-
+		
 		return fhirReference;
 	}
-
+	
 	@Override
 	public FhirReference toOpenmrsType(Reference fhirReference) {
 		FhirReference openmrsReference = new FhirReference();
-
+		
 		if (fhirReference != null) {
 			openmrsReference.setType(fhirReference.getType());
 			openmrsReference.setReference(fhirReference.getReference());
 		}
-
+		
 		return openmrsReference;
 	}
-
+	
 	@Override
 	public FhirReference toOpenmrsType(FhirReference openmrsReference, Reference fhirReference) {
 		if (fhirReference != null) {
 			if (openmrsReference == null) {
 				openmrsReference = new FhirReference();
 			}
-
+			
 			openmrsReference.setType(fhirReference.getType());
 			openmrsReference.setReference(fhirReference.getReference());
 		}
-
+		
 		return openmrsReference;
 	}
 }

@@ -10,9 +10,7 @@
 package org.openmrs.module.fhir2;
 
 import javax.persistence.CascadeType;
-import javax.persistence.CollectionTable;
 import javax.persistence.Column;
-import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
@@ -20,7 +18,6 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
@@ -70,31 +67,35 @@ public class FhirTask extends BaseOpenmrsData {
 	@Column(name = "intent")
 	@Enumerated(EnumType.STRING)
 	private TaskIntent intent;
-
+	
 	/**
-	 * BasedOn refers to a higher-level authorization that triggered the creation of the task. It references a "request" resource such as a ServiceRequest, MedicationRequest, ServiceRequest, CarePlan, etc. which is distinct from the "request" resource the task is seeking to fulfill. This latter resource is referenced by FocusOn. For example, based on a ServiceRequest (= BasedOn), a task is created to fulfill a procedureRequest ( = FocusOn ) to collect a specimen from a patient.
+	 * BasedOn refers to a higher-level authorization that triggered the creation of the task. It
+	 * references a "request" resource such as a ServiceRequest, MedicationRequest, ServiceRequest,
+	 * CarePlan, etc. which is distinct from the "request" resource the task is seeking to fulfill. This
+	 * latter resource is referenced by FocusOn. For example, based on a ServiceRequest (= BasedOn), a
+	 * task is created to fulfill a procedureRequest ( = FocusOn ) to collect a specimen from a patient.
 	 */
 	@OneToMany(cascade = CascadeType.ALL)
 	@JoinColumn(name = "based_on_reference_id", referencedColumnName = "reference_id")
 	private Collection<FhirReference> basedOnReferences;
-
+	
 	@OneToOne(cascade = CascadeType.ALL)
 	@JoinColumn(name = "for_reference_id", referencedColumnName = "reference_id")
 	private FhirReference forReference;
-
+	
 	@OneToOne(cascade = CascadeType.ALL)
 	@JoinColumn(name = "encounter_reference_id", referencedColumnName = "reference_id")
 	private FhirReference encounterReference;
-
+	
 	@OneToOne(cascade = CascadeType.ALL)
 	@JoinColumn(name = "owner_reference_id", referencedColumnName = "reference_id")
 	private FhirReference ownerReference;
-
-	@OneToMany(cascade= CascadeType.ALL)
-	@JoinColumn(name="task_id")
+	
+	@OneToMany(cascade = CascadeType.ALL)
+	@JoinColumn(name = "task_id")
 	private Collection<FhirTaskInput> input;
-
-	@OneToMany(cascade= CascadeType.ALL)
-	@JoinColumn(name="task_id")
+	
+	@OneToMany(cascade = CascadeType.ALL)
+	@JoinColumn(name = "task_id")
 	private Collection<FhirTaskOutput> output;
 }

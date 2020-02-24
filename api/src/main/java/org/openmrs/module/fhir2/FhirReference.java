@@ -34,32 +34,33 @@ import org.openmrs.BaseOpenmrsData;
 @Entity
 @Table(name = "fhir_reference")
 public class FhirReference extends BaseOpenmrsData {
+	
 	private static final long serialVersionUID = 1L;
 	
 	@Id
 	@GeneratedValue(strategy = GenerationType.AUTO)
 	@Column(name = "reference_id")
 	private Integer id;
-
-	@Column(name="type")
+	
+	@Column(name = "type")
 	private String type;
-
-	@Column(name="element_id")
+	
+	@Column(name = "element_id")
 	private String reference;
-
+	
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "based_on_task_id")
 	private FhirTask basedOnTask;
-
+	
 	@OneToOne(mappedBy = "forReference")
 	private FhirTask forTask;
-
+	
 	@OneToOne(mappedBy = "encounterReference")
 	private FhirTask encounterTask;
-
+	
 	@OneToOne(mappedBy = "ownerReference")
 	private FhirTask ownerTask;
-
+	
 	@OneToOne(mappedBy = "valueReference")
 	private FhirTaskInput taskParamValue;
 }

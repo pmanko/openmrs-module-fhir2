@@ -1,3 +1,12 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public License,
+ * v. 2.0. If a copy of the MPL was not distributed with this file, You can
+ * obtain one at http://mozilla.org/MPL/2.0/. OpenMRS is also distributed under
+ * the terms of the Healthcare Disclaimer located at http://openmrs.org/license.
+ *
+ * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
+ * graphic logo is a trademark of OpenMRS Inc.
+ */
 package org.openmrs.module.fhir2;
 
 import javax.persistence.CascadeType;
@@ -19,24 +28,24 @@ import org.openmrs.Concept;
 @EqualsAndHashCode(callSuper = true)
 @MappedSuperclass
 public abstract class FhirTaskParam extends BaseOpenmrsData {
-
+	
 	@OneToOne
-	@JoinColumn(name="task_id")
+	@JoinColumn(name = "task_id")
 	protected FhirTask task;
-
-	@Column(name="type")
+	
+	@Column(name = "type")
 	protected Concept type;
-
-	@Column(name="value_datetime")
+	
+	@Column(name = "value_datetime")
 	protected Date valueDatetime;
-
-	@Column(name="value_numeric")
+	
+	@Column(name = "value_numeric")
 	protected Double valueNumeric;
-
-	@Column(name="value_text")
+	
+	@Column(name = "value_text")
 	protected String valueText;
-
+	
 	@OneToOne(cascade = CascadeType.ALL)
-	@JoinColumn(name="value_reference_id")
+	@JoinColumn(name = "value_reference_id")
 	protected FhirReference valueReference;
 }

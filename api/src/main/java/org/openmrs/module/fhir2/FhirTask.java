@@ -9,6 +9,7 @@
  */
 package org.openmrs.module.fhir2;
 
+import javax.persistence.CascadeType;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
@@ -19,6 +20,9 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
 import java.util.Collection;
@@ -66,52 +70,31 @@ public class FhirTask extends BaseOpenmrsData {
 	@Column(name = "intent")
 	@Enumerated(EnumType.STRING)
 	private TaskIntent intent;
-	
+
 	/**
-	 * Referenced resources represented with relative resource identifier string in the format of
-	 * <ResourceName>/<ResourceId>.
+	 * BasedOn refers to a higher-level authorization that triggered the creation of the task. It references a "request" resource such as a ServiceRequest, MedicationRequest, ServiceRequest, CarePlan, etc. which is distinct from the "request" resource the task is seeking to fulfill. This latter resource is referenced by FocusOn. For example, based on a ServiceRequest (= BasedOn), a task is created to fulfill a procedureRequest ( = FocusOn ) to collect a specimen from a patient.
 	 */
-	@ElementCollection
-	@CollectionTable(name = "fhir_task_based_on", joinColumns = @JoinColumn(name = "task_id"))
-	@Column(name = "based_on")
-	private Collection<String> basedOnReferences;
-	
-	/**
-	 * Referenced resources represented with relative resource identifier string in the format of
-	 * <ResourceName>/<ResourceId>.
-	 */
-	@Column(name = "for")
-	private String forReference;
-	
-	/**
-	 * Referenced resources represented with relative resource identifier string in the format of
-	 * <ResourceName>/<ResourceId>.
-	 */
-	@Column(name = "encounter")
-	private String encounterReference;
-	
-	/**
-	 * Referenced resources represented with relative resource identifier string in the format of
-	 * <ResourceName>/<ResourceId>.
-	 */
-	@Column(name = "owner")
-	private String ownerReference;
-	
-	/**
-	 * Referenced resources represented with relative resource identifier string in the format of
-	 * <ResourceName>/<ResourceId>.
-	 */
-	@ElementCollection
-	@CollectionTable(name = "fhir_task_inputs", joinColumns = @JoinColumn(name = "task_id"))
-	@Column(name = "input")
-	private Collection<String> inputReferences;
-	
-	/**
-	 * Referenced resources represented with relative resource identifier string in the format of
-	 * <ResourceName>/<ResourceId>.
-	 */
-	@ElementCollection
-	@CollectionTable(name = "fhir_task_outputs", joinColumns = @JoinColumn(name = "task_id"))
-	@Column(name = "output")
-	private Collection<String> outputReferences;
+	@OneToMany(cascade = CascadeType.ALL)
+	@JoinColumn(name = "based_on_reference_id", referencedColumnName = "reference_id")
+	private Collection<FhirReference> basedOnReferences;
+
+	@OneToOne(cascade = CascadeType.ALL)
+	@JoinColumn(name = "for_reference_id", referencedColumnName = "reference_id")
+	private FhirReference forReference;
+
+	@OneToOne(cascade = CascadeType.ALL)
+	@JoinColumn(name = "encounter_reference_id", referencedColumnName = "reference_id")
+	private FhirReference encounterReference;
+
+	@OneToOne(cascade = CascadeType.ALL)
+	@JoinColumn(name = "owner_reference_id", referencedColumnName = "reference_id")
+	private FhirReference ownerReference;
+
+	@OneToMany(cascade= CascadeType.ALL)
+	@JoinColumn(name="task_id")
+	private Collection<FhirTaskInput> input;
+
+	@OneToMany(cascade= CascadeType.ALL)
+	@JoinColumn(name="task_id")
+	private Collection<FhirTaskOutput> output;
 }

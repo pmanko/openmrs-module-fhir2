@@ -22,7 +22,7 @@ public class FhirConstants {
 	public static final String HL7_FHIR_VALUE_SET_PREFIX = "http://hl7.org/fhir/ValueSet";
 	
 	public static final String HL7_FHIR_CODE_SYSTEM_PREFIX = "http://terminology.hl7.org/CodeSystem";
-	
+
 	public static final String DIAGNOSTIC_SERVICE_SECTIONS_VALUESET_URI = HL7_FHIR_VALUE_SET_PREFIX
 	        + "/diagnostic-service-sections";
 	
@@ -30,10 +30,16 @@ public class FhirConstants {
 	
 	public static final String CONDITION_VERIFICATION_STATUS_VALUE_SET_URI = HL7_FHIR_VALUE_SET_PREFIX
 	        + "/condition-ver-status";
-	
+
 	public static final String ALLERGY_INTOLERANCE_CLINICAL_STATUS_VALUE_SET = HL7_FHIR_CODE_SYSTEM_PREFIX
 	        + "/allergyintolerance-clinical";
-	
+
+	public static final String OBSERVATION_REFERENCE_NORMAL = "normal";
+
+	public static final String OBSERVATION_REFERENCE_TREATMENT = "treatment";
+
+	public static final String OBSERVATION_REFERENCE_RANGE_URI = "http://terminology.hl7.org/CodeSystem/referencerange-meaning";
+
 	@Value("${project.version}")
 	public static String OPENMRS_FHIR_SERVER_VERSION;
 	
@@ -46,9 +52,9 @@ public class FhirConstants {
 	public static final String OPENMRS_FHIR_EXT_ADDRESS = OPENMRS_FHIR_EXT_PREFIX + "/address";
 	
 	public static final String OPENMRS_FHIR_EXT_USER_IDENTIFIER = OPENMRS_FHIR_EXT_PREFIX + "/user/identifier";
-	
+
 	public static final String OPENMRS_FHIR_EXT_PROVIDER_IDENTIFIER = OPENMRS_FHIR_EXT_PREFIX + "/provider/identifier";
-	
+
 	public static final String OPENMRS_FHIR_EXT_LOCATION_TAG = OPENMRS_FHIR_EXT_PREFIX + "/location-tag";
 	
 	public static final String OPENMRS_FHIR_EXT_VS_INTERPRETATION = OPENMRS_FHIR_EXT_PREFIX + "/obs/interpretations";
@@ -60,17 +66,21 @@ public class FhirConstants {
 	public static final String ENCOUNTER = "Encounter";
 	
 	public static final String OBSERVATION = "Observation";
-	
+
+	public static final String ORGANIZATION = "Organization";
+
 	public static final String LOCATION = "Location";
 	
 	public static final String PATIENT = "Patient";
 	
 	public static final String PRACTITIONER = "Practitioner";
-	
+
 	public static final String IDENTIFIER = "identifier";
 	
 	public static final String DIAGNOSTIC_REPORT = "DiagnosticReport";
-	
+
+	public static final String SERVICE_REQUEST = "ServiceRequest";
+
 	public static final String DIAGNOSTIC_REPORT_CATEGORY_LAB = "LAB";
 	
 	@Value("${project.parent.artifactId}.personAttributeTypeUuid")

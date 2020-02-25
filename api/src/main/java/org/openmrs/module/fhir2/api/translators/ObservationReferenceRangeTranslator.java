@@ -7,16 +7,15 @@
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
-package org.openmrs.module.fhir2;
+package org.openmrs.module.fhir2.api.translators;
 
-public class FhirTestConstants {
+import java.util.List;
+
+import org.hl7.fhir.r4.model.Observation;
+import org.openmrs.ConceptNumeric;
+
+public interface ObservationReferenceRangeTranslator extends ToFhirTranslator<ConceptNumeric, List<Observation.ObservationReferenceRangeComponent>> {
 	
-	public static final String LOINC_SYSTEM_URL = "http://loinc.org";
-	
-	public static final String CIEL_SYSTEM_URN = "urn:oid:2.16.840.1.113883.3.7201";
-	
-	public static final String PATIENT = "Patient";
-	
-	public static final String PRACTITIONER = "Practitioner";
-	
+	@Override
+	List<Observation.ObservationReferenceRangeComponent> toFhirResource(ConceptNumeric concept);
 }

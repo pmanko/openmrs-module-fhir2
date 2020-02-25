@@ -18,6 +18,7 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
+import javax.persistence.JoinTable;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
@@ -28,13 +29,14 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import org.openmrs.BaseOpenmrsData;
+import org.openmrs.BaseOpenmrsMetadata;
 
 @Data(staticConstructor = "of")
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @Entity
 @Table(name = "fhir_task")
-public class FhirTask extends BaseOpenmrsData {
+public class FhirTask extends BaseOpenmrsMetadata {
 	
 	// Based on https://www.hl7.org/fhir/task.html v4.0.1
 	// TODO: Support this valueset: https://www.hl7.org/fhir/valueset-task-status.html
@@ -56,14 +58,23 @@ public class FhirTask extends BaseOpenmrsData {
 	@GeneratedValue(strategy = GenerationType.AUTO)
 	@Column(name = "task_id")
 	private Integer id;
-	
+
+	/**
+	 * The current status of the task.
+	 */
 	@Column(name = "status")
 	@Enumerated(EnumType.STRING)
 	private TaskStatus status;
-	
+
+	/**
+	 * An explanation as to why this task is held, failed, was refused, etc.
+	 */
 	@Column(name = "status_reason")
 	private String statusReason;
-	
+
+	/**
+	 * Indicates the "level" of actionability associated with the Task, i.e. i+R[9]Cs this a proposed task, a planned task, an actionable task, etc.
+	 */
 	@Column(name = "intent")
 	@Enumerated(EnumType.STRING)
 	private TaskIntent intent;
@@ -76,25 +87,40 @@ public class FhirTask extends BaseOpenmrsData {
 	 * task is created to fulfill a procedureRequest ( = FocusOn ) to collect a specimen from a patient.
 	 */
 	@OneToMany(cascade = CascadeType.ALL)
-	@JoinColumn(name = "based_on_reference_id", referencedColumnName = "reference_id")
+	@JoinTable(name = "fhir_task_based_on_reference", joinColumns = @JoinColumn(name="task_id"), inverseJoinColumns = @JoinColumn(name="reference_id"))
 	private Collection<FhirReference> basedOnReferences;
-	
+
+	/**
+	 * The entity who benefits from the performance of the service specified in the task (e.g., the patient).
+	 */
 	@OneToOne(cascade = CascadeType.ALL)
 	@JoinColumn(name = "for_reference_id", referencedColumnName = "reference_id")
 	private FhirReference forReference;
-	
+
+	/**
+	 * The healthcare event (e.g. a patient and healthcare provider interaction) during which this task was created.
+	 */
 	@OneToOne(cascade = CascadeType.ALL)
 	@JoinColumn(name = "encounter_reference_id", referencedColumnName = "reference_id")
 	private FhirReference encounterReference;
-	
+
+	/**
+	 * Individual organization or Device currently responsible for task execution.
+	 */
 	@OneToOne(cascade = CascadeType.ALL)
 	@JoinColumn(name = "owner_reference_id", referencedColumnName = "reference_id")
 	private FhirReference ownerReference;
-	
+
+	/**
+	 * Additional information that may be needed in the execution of the task.
+	 */
 	@OneToMany(cascade = CascadeType.ALL)
 	@JoinColumn(name = "task_id")
 	private Collection<FhirTaskInput> input;
-	
+
+	/**
+	 * Outputs produced by the Task.
+	 */
 	@OneToMany(cascade = CascadeType.ALL)
 	@JoinColumn(name = "task_id")
 	private Collection<FhirTaskOutput> output;

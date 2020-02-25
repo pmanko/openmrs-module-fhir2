@@ -21,18 +21,19 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import org.openmrs.BaseOpenmrsData;
+import org.openmrs.BaseOpenmrsMetadata;
 import org.openmrs.Concept;
 
 @Data(staticConstructor = "of")
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @MappedSuperclass
-public abstract class FhirTaskParam extends BaseOpenmrsData {
+public abstract class FhirTaskParam extends BaseOpenmrsMetadata {
 	@OneToOne
 	@JoinColumn(name = "task_id")
 	protected FhirTask task;
 	
-	@Column(name = "type")
+	@Column(name = "type_id")
 	protected Concept type;
 	
 	@Column(name = "value_datetime")

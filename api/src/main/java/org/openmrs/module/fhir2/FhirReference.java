@@ -24,6 +24,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import org.openmrs.BaseOpenmrsData;
+import org.openmrs.BaseOpenmrsMetadata;
 
 /**
  * FHIR Reference - https://www.hl7.org/fhir/references.html
@@ -33,7 +34,7 @@ import org.openmrs.BaseOpenmrsData;
 @EqualsAndHashCode(callSuper = true)
 @Entity
 @Table(name = "fhir_reference")
-public class FhirReference extends BaseOpenmrsData {
+public class FhirReference extends BaseOpenmrsMetadata {
 	
 	private static final long serialVersionUID = 1L;
 	
@@ -45,22 +46,6 @@ public class FhirReference extends BaseOpenmrsData {
 	@Column(name = "type")
 	private String type;
 	
-	@Column(name = "element_id")
+	@Column(name = "reference")
 	private String reference;
-	
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "based_on_task_id")
-	private FhirTask basedOnTask;
-	
-	@OneToOne(mappedBy = "forReference")
-	private FhirTask forTask;
-	
-	@OneToOne(mappedBy = "encounterReference")
-	private FhirTask encounterTask;
-	
-	@OneToOne(mappedBy = "ownerReference")
-	private FhirTask ownerTask;
-	
-	@OneToOne(mappedBy = "valueReference")
-	private FhirTaskInput taskParamValue;
 }

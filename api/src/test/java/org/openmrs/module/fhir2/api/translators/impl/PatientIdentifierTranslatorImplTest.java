@@ -25,6 +25,7 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
+import org.openmrs.module.fhir2.api.FhirGlobalPropertyService;
 import org.openmrs.module.fhir2.api.FhirPatientService;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -43,10 +44,14 @@ public class PatientIdentifierTranslatorImplTest {
 	@Mock
 	private FhirPatientService patientService;
 	
+	@Mock
+	private FhirGlobalPropertyService globalPropertyService;
+	
 	@Before
 	public void setup() {
 		identifierTranslator = new PatientIdentifierTranslatorImpl();
 		identifierTranslator.setPatientService(patientService);
+		identifierTranslator.setGlobalPropertyService(globalPropertyService);
 	}
 	
 	@Test

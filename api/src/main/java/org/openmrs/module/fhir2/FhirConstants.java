@@ -9,11 +9,14 @@
  */
 package org.openmrs.module.fhir2;
 
-import lombok.NoArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 
-@NoArgsConstructor
 public class FhirConstants {
+	
+	private FhirConstants() {
+	}
+	
+	public static final String FHIR2_MODULE_ID = "fhir2";
 	
 	public static final String OPENMRS_FHIR_SERVER_NAME = "OpenMRS FHIR Server";
 	
@@ -50,7 +53,7 @@ public class FhirConstants {
 	        + "/condition-ver-status";
 	
 	public static final String CLINICAL_FINDINGS_SYSTEM_URI = HL7_FHIR_CODE_SYSTEM_PREFIX + "/clinical-findings";
-
+	
 	public static final String TASK_STATUS_VALUE_SET_URI = "http://hl7.org/fhir/task-status";
 	
 	public static final String OBSERVATION_REFERENCE_RANGE_SYSTEM_URI = HL7_FHIR_CODE_SYSTEM_PREFIX
@@ -101,6 +104,8 @@ public class FhirConstants {
 	
 	public static final String OPENMRS_FHIR_EXT_PATIENT_IDENTIFIER_LOCATION = OPENMRS_FHIR_EXT_PREFIX
 	        + "/patient/identifier#location";
+	
+	public static final String OPENMRS_FHIR_EXT_ENCOUNTER_TAG = OPENMRS_FHIR_EXT_PREFIX + "/encounter-tag";
 	
 	public static final String OPENMRS_FHIR_EXT_OBSERVATION_REFERENCE_RANGE = OPENMRS_FHIR_EXT_PREFIX
 	        + "/obs/reference-range";
@@ -233,6 +238,8 @@ public class FhirConstants {
 	
 	public static final String TAG_SEARCH_HANDLER = "tag.search.handler";
 	
+	public static final String GROUP_MEMBERS_SEARCH_HANDLER = "group.members.search.handler";
+	
 	public static final String HAPI_NARRATIVES_PROPERTY_FILE = "classpath:ca/uhn/fhir/narrative/narratives.properties";
 	
 	public static final String OPENMRS_NARRATIVES_PROPERTY_FILE = "classpath:org/openmrs/module/fhir2/narratives.properties";
@@ -294,4 +301,10 @@ public class FhirConstants {
 	public static final String REVERSE_INCLUDE_SEARCH_HANDLER = "_revinclude.search.handler";
 	
 	public static final String CONDITION_OBSERVATION_CONCEPT_UUID = "1284AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+	
+	public static final String MAX_SEARCH_HANDLER = "max.search.handler";
+	
+	public static final String LASTN_OBSERVATION_SEARCH_HANDLER = "lastn.observation.search.handler";
+	
+	public static final String LASTN_ENCOUNTERS_SEARCH_HANDLER = "lastn.encounters.search.handler";
 }

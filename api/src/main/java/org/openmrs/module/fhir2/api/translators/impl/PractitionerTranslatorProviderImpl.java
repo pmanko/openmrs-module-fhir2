@@ -9,15 +9,18 @@
  */
 package org.openmrs.module.fhir2.api.translators.impl;
 
+import static lombok.AccessLevel.PROTECTED;
 import static org.openmrs.module.fhir2.api.translators.impl.FhirTranslatorUtils.getLastUpdated;
+import static org.openmrs.module.fhir2.api.translators.impl.FhirTranslatorUtils.getVersionId;
 
 import javax.annotation.Nonnull;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import lombok.AccessLevel;
+import lombok.Getter;
 import lombok.Setter;
 import org.hl7.fhir.r4.model.Address;
 import org.hl7.fhir.r4.model.ContactPoint;
@@ -30,6 +33,7 @@ import org.openmrs.PersonAddress;
 import org.openmrs.PersonName;
 import org.openmrs.Provider;
 import org.openmrs.ProviderAttribute;
+import org.openmrs.api.context.Context;
 import org.openmrs.module.fhir2.FhirConstants;
 import org.openmrs.module.fhir2.api.FhirGlobalPropertyService;
 import org.openmrs.module.fhir2.api.dao.FhirPractitionerDao;
@@ -39,32 +43,39 @@ import org.openmrs.module.fhir2.api.translators.PersonAddressTranslator;
 import org.openmrs.module.fhir2.api.translators.PersonNameTranslator;
 import org.openmrs.module.fhir2.api.translators.PractitionerTranslator;
 import org.openmrs.module.fhir2.api.translators.TelecomTranslator;
+import org.openmrs.util.PrivilegeConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
-@Setter(AccessLevel.PACKAGE)
 public class PractitionerTranslatorProviderImpl implements PractitionerTranslator<Provider> {
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private PersonNameTranslator nameTranslator;
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private PersonAddressTranslator addressTranslator;
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private GenderTranslator genderTranslator;
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private BirthDateTranslator birthDateTranslator;
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private TelecomTranslator<BaseOpenmrsData> telecomTranslator;
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private FhirPractitionerDao fhirPractitionerDao;
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private FhirGlobalPropertyService globalPropertyService;
 	
 	@Override
@@ -77,7 +88,9 @@ public class PractitionerTranslatorProviderImpl implements PractitionerTranslato
 			return null;
 		}
 		
-		existingProvider.setUuid(practitioner.getId());
+		if (practitioner.hasId()) {
+			existingProvider.setUuid(practitioner.getIdElement().getIdPart());
+		}
 		
 		existingProvider.setIdentifier(practitioner.getIdentifierFirstRep().getValue());
 		
@@ -139,15 +152,23 @@ public class PractitionerTranslatorProviderImpl implements PractitionerTranslato
 		}
 		
 		practitioner.getMeta().setLastUpdated(getLastUpdated(provider));
+		practitioner.getMeta().setVersionId(getVersionId(provider));
 		
 		return practitioner;
 	}
 	
 	public List<ContactPoint> getProviderContactDetails(@Nonnull Provider provider) {
+		String providerContactPointAttributeType = globalPropertyService
+		        .getGlobalProperty(FhirConstants.PROVIDER_CONTACT_POINT_ATTRIBUTE_TYPE);
+		
+		if (providerContactPointAttributeType == null || providerContactPointAttributeType.isEmpty()
+		        || !Context.hasPrivilege(PrivilegeConstants.GET_PROVIDER_ATTRIBUTE_TYPES)) {
+			return Collections.emptyList();
+		}
+		
 		return fhirPractitionerDao
-		        .getActiveAttributesByPractitionerAndAttributeTypeUuid(provider,
-		            globalPropertyService.getGlobalProperty(FhirConstants.PROVIDER_CONTACT_POINT_ATTRIBUTE_TYPE))
-		        .stream().map(telecomTranslator::toFhirResource).collect(Collectors.toList());
+		        .getActiveAttributesByPractitionerAndAttributeTypeUuid(provider, providerContactPointAttributeType).stream()
+		        .map(telecomTranslator::toFhirResource).collect(Collectors.toList());
 	}
 	
 	@Override

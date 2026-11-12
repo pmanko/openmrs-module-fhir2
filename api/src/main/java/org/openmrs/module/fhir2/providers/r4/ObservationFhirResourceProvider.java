@@ -10,6 +10,7 @@
 package org.openmrs.module.fhir2.providers.r4;
 
 import static lombok.AccessLevel.PACKAGE;
+import static lombok.AccessLevel.PROTECTED;
 
 import javax.annotation.Nonnull;
 
@@ -24,13 +25,17 @@ import ca.uhn.fhir.rest.annotation.IncludeParam;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.annotation.OptionalParam;
+import ca.uhn.fhir.rest.annotation.Patch;
 import ca.uhn.fhir.rest.annotation.Read;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
 import ca.uhn.fhir.rest.annotation.Search;
 import ca.uhn.fhir.rest.annotation.Sort;
+import ca.uhn.fhir.rest.annotation.Update;
 import ca.uhn.fhir.rest.api.MethodOutcome;
+import ca.uhn.fhir.rest.api.PatchTypeEnum;
 import ca.uhn.fhir.rest.api.SortSpec;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
+import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.param.DateRangeParam;
 import ca.uhn.fhir.rest.param.NumberParam;
 import ca.uhn.fhir.rest.param.QuantityAndListParam;
@@ -38,7 +43,9 @@ import ca.uhn.fhir.rest.param.ReferenceAndListParam;
 import ca.uhn.fhir.rest.param.StringAndListParam;
 import ca.uhn.fhir.rest.param.TokenAndListParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.collections.CollectionUtils;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -57,11 +64,11 @@ import org.springframework.stereotype.Component;
 
 @Component("observationFhirR4ResourceProvider")
 @R4Provider
-@Setter(PACKAGE)
 @SuppressWarnings("unused")
 public class ObservationFhirResourceProvider implements IResourceProvider {
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PACKAGE, onMethod_ = @Autowired)
 	private FhirObservationService observationService;
 	
 	@Override
@@ -81,6 +88,29 @@ public class ObservationFhirResourceProvider implements IResourceProvider {
 	@Create
 	public MethodOutcome createObservationResource(@ResourceParam Observation observation) {
 		return FhirProviderUtils.buildCreate(observationService.create(observation));
+	}
+	
+	@Update
+	@SuppressWarnings("unused")
+	public MethodOutcome updateObservation(@IdParam IdType id, @ResourceParam Observation observation) {
+		if (id == null || id.getIdPart() == null) {
+			throw new InvalidRequestException("id must be specified to update");
+		}
+		
+		observation.setId(id.getIdPart());
+		
+		return FhirProviderUtils.buildUpdate(observationService.update(id.getIdPart(), observation));
+	}
+	
+	@Patch
+	public MethodOutcome patchObservation(@IdParam IdType id, PatchTypeEnum patchType, @ResourceParam String body,
+	        RequestDetails requestDetails) {
+		if (id == null || id.getIdPart() == null) {
+			throw new InvalidRequestException("id must be specified to update Patient resource");
+		}
+		
+		Observation observation = observationService.patch(id.getIdPart(), patchType, body, requestDetails);
+		return FhirProviderUtils.buildPatch(observation);
 	}
 	
 	@Delete

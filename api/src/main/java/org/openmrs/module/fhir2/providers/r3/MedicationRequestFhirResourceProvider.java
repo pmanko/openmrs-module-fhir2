@@ -10,6 +10,7 @@
 package org.openmrs.module.fhir2.providers.r3;
 
 import static lombok.AccessLevel.PACKAGE;
+import static lombok.AccessLevel.PROTECTED;
 
 import javax.annotation.Nonnull;
 
@@ -19,20 +20,24 @@ import ca.uhn.fhir.model.api.Include;
 import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.IncludeParam;
 import ca.uhn.fhir.rest.annotation.OptionalParam;
+import ca.uhn.fhir.rest.annotation.Patch;
 import ca.uhn.fhir.rest.annotation.Read;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
 import ca.uhn.fhir.rest.annotation.Search;
 import ca.uhn.fhir.rest.api.MethodOutcome;
+import ca.uhn.fhir.rest.api.PatchTypeEnum;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
+import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.param.DateRangeParam;
 import ca.uhn.fhir.rest.param.ReferenceAndListParam;
 import ca.uhn.fhir.rest.param.TokenAndListParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.collections.CollectionUtils;
-import org.hl7.fhir.convertors.conv30_40.MedicationRequest30_40;
+import org.hl7.fhir.convertors.factory.VersionConvertorFactory_30_40;
 import org.hl7.fhir.dstu3.model.Encounter;
 import org.hl7.fhir.dstu3.model.IdType;
 import org.hl7.fhir.dstu3.model.Medication;
@@ -42,19 +47,21 @@ import org.hl7.fhir.dstu3.model.OperationOutcome;
 import org.hl7.fhir.dstu3.model.Patient;
 import org.hl7.fhir.dstu3.model.Practitioner;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.openmrs.module.fhir2.FhirConstants;
 import org.openmrs.module.fhir2.api.FhirMedicationRequestService;
 import org.openmrs.module.fhir2.api.annotations.R3Provider;
 import org.openmrs.module.fhir2.api.search.SearchQueryBundleProviderR3Wrapper;
+import org.openmrs.module.fhir2.api.search.param.MedicationRequestSearchParams;
 import org.openmrs.module.fhir2.providers.util.FhirProviderUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component("medicationRequestFhirR3ResourceProvider")
 @R3Provider
-@Setter(PACKAGE)
 public class MedicationRequestFhirResourceProvider implements IResourceProvider {
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PACKAGE, onMethod_ = @Autowired)
 	private FhirMedicationRequestService medicationRequestService;
 	
 	@Override
@@ -70,27 +77,23 @@ public class MedicationRequestFhirResourceProvider implements IResourceProvider 
 			throw new ResourceNotFoundException("Could not find medicationRequest with Id " + id.getIdPart());
 		}
 		
-		return MedicationRequest30_40.convertMedicationRequest(medicationRequest);
+		return (MedicationRequest) VersionConvertorFactory_30_40.convertResource(medicationRequest);
 	}
 	
-	public MethodOutcome createMedicationRequest(@ResourceParam MedicationRequest mRequest) {
-		org.hl7.fhir.r4.model.MedicationRequest medicationRequest = medicationRequestService
-		        .create(MedicationRequest30_40.convertMedicationRequest(mRequest));
-		
-		return FhirProviderUtils.buildCreate(MedicationRequest30_40.convertMedicationRequest(medicationRequest));
-	}
+	// NOTE: POST/Create not yet supported, see: https://issues.openmrs.org/browse/FM2-568
+	// NOTE: PUT/Update not supported, because Drug Orders are immutable, use PATCH
 	
-	public MethodOutcome updateMedicationRequest(@IdParam IdType id, @ResourceParam MedicationRequest mRequest) {
+	@Patch
+	public MethodOutcome patchMedicationRequest(@IdParam @Nonnull IdType id, PatchTypeEnum patchType,
+	        @ResourceParam String body, RequestDetails requestDetails) {
 		if (id == null || id.getIdPart() == null) {
 			throw new InvalidRequestException("id must be specified to update resource");
 		}
 		
-		mRequest.setId(id.getIdPart());
+		org.hl7.fhir.r4.model.MedicationRequest medicationRequest = medicationRequestService.patch(id.getIdPart(), patchType,
+		    body, requestDetails);
 		
-		org.hl7.fhir.r4.model.MedicationRequest medicationRequest = medicationRequestService.update(id.getIdPart(),
-		    MedicationRequest30_40.convertMedicationRequest(mRequest));
-		
-		return FhirProviderUtils.buildUpdate(MedicationRequest30_40.convertMedicationRequest(medicationRequest));
+		return FhirProviderUtils.buildPatch(medicationRequest);
 	}
 	
 	public OperationOutcome deleteMedicationRequest(@IdParam IdType id) {
@@ -117,6 +120,7 @@ public class MedicationRequestFhirResourceProvider implements IResourceProvider 
 	                "" }, targetTypes = Medication.class) ReferenceAndListParam medicationReference,
 	        @OptionalParam(name = MedicationRequest.SP_RES_ID) TokenAndListParam id,
 	        @OptionalParam(name = MedicationRequest.SP_STATUS) TokenAndListParam status,
+	        @OptionalParam(name = FhirConstants.SP_FULFILLER_STATUS) TokenAndListParam fulfillerStatus,
 	        @OptionalParam(name = "_lastUpdated") DateRangeParam lastUpdated,
 	        @IncludeParam(allow = { "MedicationRequest:" + MedicationRequest.SP_MEDICATION,
 	                "MedicationRequest:" + MedicationRequest.SP_REQUESTER,
@@ -136,8 +140,8 @@ public class MedicationRequestFhirResourceProvider implements IResourceProvider 
 			revIncludes = null;
 		}
 		
-		return new SearchQueryBundleProviderR3Wrapper(
-		        medicationRequestService.searchForMedicationRequests(patientReference, encounterReference, code,
-		            participantReference, medicationReference, id, status, lastUpdated, includes, revIncludes));
+		return new SearchQueryBundleProviderR3Wrapper(medicationRequestService.searchForMedicationRequests(
+		    new MedicationRequestSearchParams(patientReference, encounterReference, code, participantReference,
+		            medicationReference, id, status, fulfillerStatus, lastUpdated, includes, revIncludes)));
 	}
 }

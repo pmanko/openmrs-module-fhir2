@@ -10,6 +10,7 @@
 package org.openmrs.module.fhir2.providers.r3;
 
 import static lombok.AccessLevel.PACKAGE;
+import static lombok.AccessLevel.PROTECTED;
 
 import javax.annotation.Nonnull;
 
@@ -29,15 +30,17 @@ import ca.uhn.fhir.rest.param.StringAndListParam;
 import ca.uhn.fhir.rest.param.TokenAndListParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.collections.CollectionUtils;
-import org.hl7.fhir.convertors.conv30_40.RelatedPerson30_40;
+import org.hl7.fhir.convertors.factory.VersionConvertorFactory_30_40;
 import org.hl7.fhir.dstu3.model.IdType;
 import org.hl7.fhir.dstu3.model.RelatedPerson;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.openmrs.module.fhir2.api.FhirRelatedPersonService;
 import org.openmrs.module.fhir2.api.annotations.R3Provider;
 import org.openmrs.module.fhir2.api.search.SearchQueryBundleProviderR3Wrapper;
+import org.openmrs.module.fhir2.api.search.param.RelatedPersonSearchParams;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -46,7 +49,8 @@ import org.springframework.stereotype.Component;
 @Setter(PACKAGE)
 public class RelatedPersonFhirResourceProvider implements IResourceProvider {
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PACKAGE, onMethod_ = @Autowired)
 	private FhirRelatedPersonService relatedPersonService;
 	
 	@Override
@@ -61,7 +65,7 @@ public class RelatedPersonFhirResourceProvider implements IResourceProvider {
 		if (relatedPerson == null) {
 			throw new ResourceNotFoundException("Could not find relatedPerson with Id " + id.getIdPart());
 		}
-		return RelatedPerson30_40.convertRelatedPerson(relatedPerson);
+		return (RelatedPerson) VersionConvertorFactory_30_40.convertResource(relatedPerson);
 	}
 	
 	@Search
@@ -80,7 +84,8 @@ public class RelatedPersonFhirResourceProvider implements IResourceProvider {
 			includes = null;
 		}
 		
-		return new SearchQueryBundleProviderR3Wrapper(relatedPersonService.searchForRelatedPeople(name, gender, birthDate,
-		    city, state, postalCode, country, id, lastUpdated, sort, includes));
+		return new SearchQueryBundleProviderR3Wrapper(
+		        relatedPersonService.searchForRelatedPeople(new RelatedPersonSearchParams(name, gender, birthDate, city,
+		                state, postalCode, country, id, lastUpdated, sort, includes)));
 	}
 }

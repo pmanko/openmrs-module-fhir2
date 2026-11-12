@@ -9,30 +9,34 @@
  */
 package org.openmrs.module.fhir2.api.dao.impl;
 
-import static org.hibernate.criterion.Restrictions.eq;
-
 import java.util.Optional;
 
 import ca.uhn.fhir.rest.param.TokenAndListParam;
-import lombok.AccessLevel;
-import lombok.Setter;
-import org.hibernate.Criteria;
 import org.openmrs.User;
 import org.openmrs.module.fhir2.api.dao.FhirUserDao;
+import org.openmrs.module.fhir2.api.dao.internals.OpenmrsFhirCriteriaContext;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
-@Setter(AccessLevel.PACKAGE)
 public class FhirUserDaoImpl extends BasePractitionerDao<User> implements FhirUserDao {
 	
 	@Override
+	@Transactional(readOnly = true)
 	public User getUserByUserName(String username) {
-		return (User) getSessionFactory().getCurrentSession().createCriteria(User.class).add(eq("username", username))
-		        .uniqueResult();
+		OpenmrsFhirCriteriaContext<User, User> criteriaContext = createCriteriaContext(User.class);
+		criteriaContext.getCriteriaQuery().select(criteriaContext.getRoot())
+		        .where(criteriaContext.getCriteriaBuilder().equal(criteriaContext.getRoot().get("username"), username));
+		
+		return criteriaContext.getEntityManager().createQuery(criteriaContext.getCriteriaQuery()).getResultList().stream()
+		        .findFirst().orElse(null);
 	}
 	
 	@Override
-	protected void handleIdentifier(Criteria criteria, TokenAndListParam identifier) {
-		handleAndListParam(identifier, param -> Optional.of(eq("username", param.getValue()))).ifPresent(criteria::add);
+	protected <U> void handleIdentifier(OpenmrsFhirCriteriaContext<User, U> criteriaContext, TokenAndListParam identifier) {
+		handleAndListParam(criteriaContext.getCriteriaBuilder(), identifier,
+		    param -> Optional.of(
+		        criteriaContext.getCriteriaBuilder().equal(criteriaContext.getRoot().get("username"), param.getValue())))
+		                .ifPresent(criteriaContext::addPredicate);
 	}
 }

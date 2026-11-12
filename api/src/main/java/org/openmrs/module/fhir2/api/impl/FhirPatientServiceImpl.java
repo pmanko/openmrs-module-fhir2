@@ -9,79 +9,34 @@
  */
 package org.openmrs.module.fhir2.api.impl;
 
-import javax.annotation.Nonnull;
-
-import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
-import java.util.stream.Collectors;
 
 import ca.uhn.fhir.model.api.Include;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.TokenAndListParam;
 import ca.uhn.fhir.rest.param.TokenParam;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.Setter;
-import org.apache.commons.lang3.StringUtils;
-import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.Patient;
-import org.openmrs.PatientIdentifierType;
 import org.openmrs.module.fhir2.FhirConstants;
 import org.openmrs.module.fhir2.api.FhirPatientService;
-import org.openmrs.module.fhir2.api.dao.FhirPatientDao;
-import org.openmrs.module.fhir2.api.search.SearchQuery;
-import org.openmrs.module.fhir2.api.search.SearchQueryInclude;
+import org.openmrs.module.fhir2.api.search.param.OpenmrsPatientSearchParams;
 import org.openmrs.module.fhir2.api.search.param.PatientSearchParams;
 import org.openmrs.module.fhir2.api.search.param.SearchParameterMap;
-import org.openmrs.module.fhir2.api.translators.PatientTranslator;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
-@Transactional
-@Setter(AccessLevel.PACKAGE)
-@Getter(AccessLevel.PROTECTED)
-public class FhirPatientServiceImpl extends BaseFhirService<Patient, org.openmrs.Patient> implements FhirPatientService {
-	
-	@Autowired
-	private PatientTranslator translator;
-	
-	@Autowired
-	private FhirPatientDao dao;
-	
-	@Autowired
-	private SearchQueryInclude<Patient> searchQueryInclude;
-	
-	@Autowired
-	private SearchQuery<org.openmrs.Patient, Patient, FhirPatientDao, PatientTranslator, SearchQueryInclude<Patient>> searchQuery;
-	
-	@Override
-	public List<Patient> getPatientsByIds(@Nonnull Collection<Integer> ids) {
-		List<org.openmrs.Patient> patients = dao.getPatientsByIds(ids);
-		return patients.stream().map(translator::toFhirResource).collect(Collectors.toList());
-	}
-	
-	@Override
-	public Patient getById(@Nonnull Integer id) {
-		return translator.toFhirResource(dao.getPatientById(id));
-	}
-	
-	@Override
-	@Transactional(readOnly = true)
-	public PatientIdentifierType getPatientIdentifierTypeByIdentifier(Identifier identifier) {
-		if (identifier.getType() == null || StringUtils.isBlank(identifier.getType().getText())) {
-			return null;
-		}
-		
-		return dao.getPatientIdentifierTypeByNameOrUuid(identifier.getType().getText(), null);
-	}
+public class FhirPatientServiceImpl extends BaseCompositeFhirService<Patient> implements FhirPatientService {
 	
 	@Override
 	@Transactional(readOnly = true)
 	public IBundleProvider searchForPatients(PatientSearchParams patientSearchParams) {
-		return searchQuery.getQueryResults(patientSearchParams.toSearchParameterMap(), dao, translator, searchQueryInclude);
+		return doSearch(patientSearchParams.toSearchParameterMap());
+	}
+	
+	@Override
+	@Transactional(readOnly = true)
+	public IBundleProvider searchForPatients(OpenmrsPatientSearchParams patientSearchParams) {
+		return doSearch(patientSearchParams.toSearchParameterMap());
 	}
 	
 	@Override
@@ -92,7 +47,7 @@ public class FhirPatientServiceImpl extends BaseFhirService<Patient, org.openmrs
 		            new TokenAndListParam().addAnd(patientId));
 		
 		populateEverythingOperationParams(theParams);
-		return searchQuery.getQueryResults(theParams, dao, translator, searchQueryInclude);
+		return doSearch(theParams);
 	}
 	
 	@Override
@@ -101,7 +56,7 @@ public class FhirPatientServiceImpl extends BaseFhirService<Patient, org.openmrs
 		SearchParameterMap theParams = new SearchParameterMap().addParameter(FhirConstants.EVERYTHING_SEARCH_HANDLER, "");
 		
 		populateEverythingOperationParams(theParams);
-		return searchQuery.getQueryResults(theParams, dao, translator, searchQueryInclude);
+		return doSearch(theParams);
 	}
 	
 	private void populateEverythingOperationParams(SearchParameterMap theParams) {

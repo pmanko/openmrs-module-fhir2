@@ -10,6 +10,7 @@
 package org.openmrs.module.fhir2.providers.r3;
 
 import static lombok.AccessLevel.PACKAGE;
+import static lombok.AccessLevel.PROTECTED;
 
 import javax.annotation.Nonnull;
 
@@ -21,8 +22,9 @@ import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.StringAndListParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import lombok.Getter;
 import lombok.Setter;
-import org.hl7.fhir.convertors.conv30_40.ValueSet30_40;
+import org.hl7.fhir.convertors.factory.VersionConvertorFactory_30_40;
 import org.hl7.fhir.dstu3.model.IdType;
 import org.hl7.fhir.dstu3.model.ValueSet;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -34,10 +36,10 @@ import org.springframework.stereotype.Component;
 
 @Component("valueSetFhirR3ResourceProvider")
 @R3Provider
-@Setter(PACKAGE)
 public class ValueSetFhirResourceProvider implements IResourceProvider {
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PACKAGE, onMethod_ = @Autowired)
 	FhirValueSetService fhirValueSetService;
 	
 	@Override
@@ -51,7 +53,7 @@ public class ValueSetFhirResourceProvider implements IResourceProvider {
 		if (valueSet == null) {
 			throw new ResourceNotFoundException("Could not find valueset with Id" + id.getIdPart());
 		}
-		return ValueSet30_40.convertValueSet(valueSet);
+		return (ValueSet) VersionConvertorFactory_30_40.convertResource(valueSet);
 	}
 	
 	@Search

@@ -10,6 +10,7 @@
 package org.openmrs.module.fhir2.providers.r4;
 
 import static lombok.AccessLevel.PACKAGE;
+import static lombok.AccessLevel.PROTECTED;
 
 import javax.annotation.Nonnull;
 
@@ -21,17 +22,19 @@ import ca.uhn.fhir.rest.annotation.Delete;
 import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.IncludeParam;
 import ca.uhn.fhir.rest.annotation.OptionalParam;
+import ca.uhn.fhir.rest.annotation.Patch;
 import ca.uhn.fhir.rest.annotation.Read;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
 import ca.uhn.fhir.rest.annotation.Search;
-import ca.uhn.fhir.rest.annotation.Update;
 import ca.uhn.fhir.rest.api.MethodOutcome;
+import ca.uhn.fhir.rest.api.PatchTypeEnum;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
+import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.param.DateRangeParam;
 import ca.uhn.fhir.rest.param.TokenAndListParam;
-import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.collections.CollectionUtils;
 import org.hl7.fhir.dstu3.model.MedicationDispense;
@@ -42,16 +45,17 @@ import org.hl7.fhir.r4.model.MedicationRequest;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.openmrs.module.fhir2.api.FhirMedicationService;
 import org.openmrs.module.fhir2.api.annotations.R4Provider;
+import org.openmrs.module.fhir2.api.search.param.MedicationSearchParams;
 import org.openmrs.module.fhir2.providers.util.FhirProviderUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component("medicationFhirR4ResourceProvider")
 @R4Provider
-@Setter(PACKAGE)
-public class MedicationFhirResourceProvider implements IResourceProvider {
+public class MedicationFhirResourceProvider extends BaseUpsertFhirResourceProvider<Medication> {
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PACKAGE, onMethod_ = @Autowired)
 	private FhirMedicationService fhirMedicationService;
 	
 	@Override
@@ -75,16 +79,29 @@ public class MedicationFhirResourceProvider implements IResourceProvider {
 		return FhirProviderUtils.buildCreate(fhirMedicationService.create(medication));
 	}
 	
-	@Update
-	@SuppressWarnings("unused")
-	public MethodOutcome updateMedication(@IdParam IdType id, @ResourceParam Medication medication) {
+	@Override
+	protected MethodOutcome doUpsert(IdType id, Medication medication, RequestDetails requestDetails,
+	        boolean createIfNotExists) {
 		if (id == null || id.getIdPart() == null) {
 			throw new InvalidRequestException("id must be specified to update");
 		}
 		
 		medication.setId(id.getIdPart());
 		
-		return FhirProviderUtils.buildUpdate(fhirMedicationService.update(id.getIdPart(), medication));
+		return FhirProviderUtils
+		        .buildUpdate(fhirMedicationService.update(id.getIdPart(), medication, requestDetails, createIfNotExists));
+	}
+	
+	@Patch
+	public MethodOutcome patchMedication(@IdParam IdType id, PatchTypeEnum patchType, @ResourceParam String body,
+	        RequestDetails requestDetails) {
+		if (id == null || id.getIdPart() == null) {
+			throw new InvalidRequestException("id must be specified to update Medication resource");
+		}
+		
+		Medication medication = fhirMedicationService.patch(id.getIdPart(), patchType, body, requestDetails);
+		
+		return FhirProviderUtils.buildPatch(medication);
 	}
 	
 	@Delete
@@ -107,6 +124,7 @@ public class MedicationFhirResourceProvider implements IResourceProvider {
 			revIncludes = null;
 		}
 		
-		return fhirMedicationService.searchForMedications(code, dosageForm, ingredientCode, id, lastUpdated, revIncludes);
+		return fhirMedicationService.searchForMedications(
+		    new MedicationSearchParams(code, dosageForm, ingredientCode, id, lastUpdated, revIncludes));
 	}
 }

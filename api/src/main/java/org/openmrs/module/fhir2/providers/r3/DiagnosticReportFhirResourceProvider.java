@@ -10,6 +10,7 @@
 package org.openmrs.module.fhir2.providers.r3;
 
 import static lombok.AccessLevel.PACKAGE;
+import static lombok.AccessLevel.PROTECTED;
 
 import javax.annotation.Nonnull;
 
@@ -34,9 +35,10 @@ import ca.uhn.fhir.rest.param.ReferenceAndListParam;
 import ca.uhn.fhir.rest.param.TokenAndListParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.collections.CollectionUtils;
-import org.hl7.fhir.convertors.conv30_40.DiagnosticReport30_40;
+import org.hl7.fhir.convertors.factory.VersionConvertorFactory_30_40;
 import org.hl7.fhir.dstu3.model.DiagnosticReport;
 import org.hl7.fhir.dstu3.model.Encounter;
 import org.hl7.fhir.dstu3.model.IdType;
@@ -46,16 +48,17 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.openmrs.module.fhir2.api.FhirDiagnosticReportService;
 import org.openmrs.module.fhir2.api.annotations.R3Provider;
 import org.openmrs.module.fhir2.api.search.SearchQueryBundleProviderR3Wrapper;
+import org.openmrs.module.fhir2.api.search.param.DiagnosticReportSearchParams;
 import org.openmrs.module.fhir2.providers.util.FhirProviderUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component("diagnosticReportFhirR3ResourceProvider")
 @R3Provider
-@Setter(PACKAGE)
 public class DiagnosticReportFhirResourceProvider implements IResourceProvider {
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PACKAGE, onMethod_ = @Autowired)
 	private FhirDiagnosticReportService diagnosticReportService;
 	
 	@Override
@@ -71,14 +74,14 @@ public class DiagnosticReportFhirResourceProvider implements IResourceProvider {
 			throw new ResourceNotFoundException("Could not find diagnosticReport with Id " + id.getIdPart());
 		}
 		
-		return DiagnosticReport30_40.convertDiagnosticReport(diagnosticReport);
+		return (DiagnosticReport) VersionConvertorFactory_30_40.convertResource(diagnosticReport);
 	}
 	
 	@Create
 	@SuppressWarnings("unused")
 	public MethodOutcome createDiagnosticReport(@ResourceParam DiagnosticReport diagnosticReport) {
-		return FhirProviderUtils.buildCreate(DiagnosticReport30_40.convertDiagnosticReport(
-		    diagnosticReportService.create(DiagnosticReport30_40.convertDiagnosticReport(diagnosticReport))));
+		return FhirProviderUtils.buildCreate(VersionConvertorFactory_30_40.convertResource(diagnosticReportService.create(
+		    (org.hl7.fhir.r4.model.DiagnosticReport) VersionConvertorFactory_30_40.convertResource(diagnosticReport))));
 	}
 	
 	@Update
@@ -90,8 +93,9 @@ public class DiagnosticReportFhirResourceProvider implements IResourceProvider {
 			idPart = id.getIdPart();
 		}
 		
-		return FhirProviderUtils.buildUpdate(DiagnosticReport30_40.convertDiagnosticReport(
-		    diagnosticReportService.update(idPart, DiagnosticReport30_40.convertDiagnosticReport(diagnosticReport))));
+		return FhirProviderUtils.buildUpdate(
+		    VersionConvertorFactory_30_40.convertResource(diagnosticReportService.update(idPart,
+		        (org.hl7.fhir.r4.model.DiagnosticReport) VersionConvertorFactory_30_40.convertResource(diagnosticReport))));
 	}
 	
 	@Delete
@@ -126,7 +130,8 @@ public class DiagnosticReportFhirResourceProvider implements IResourceProvider {
 			includes = null;
 		}
 		
-		return new SearchQueryBundleProviderR3Wrapper(diagnosticReportService.searchForDiagnosticReports(encounterReference,
-		    patientReference, issueDate, code, result, id, lastUpdated, sort, includes));
+		return new SearchQueryBundleProviderR3Wrapper(
+		        diagnosticReportService.searchForDiagnosticReports(new DiagnosticReportSearchParams(encounterReference,
+		                patientReference, issueDate, code, result, id, lastUpdated, sort, includes)));
 	}
 }

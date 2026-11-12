@@ -9,12 +9,14 @@
  */
 package org.openmrs.module.fhir2.api.translators.impl;
 
+import static lombok.AccessLevel.PROTECTED;
 import static org.apache.commons.lang3.Validate.notNull;
 import static org.openmrs.module.fhir2.api.translators.impl.FhirTranslatorUtils.getLastUpdated;
+import static org.openmrs.module.fhir2.api.translators.impl.FhirTranslatorUtils.getVersionId;
 
 import javax.annotation.Nonnull;
 
-import lombok.AccessLevel;
+import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.collections.CollectionUtils;
 import org.hl7.fhir.r4.model.AllergyIntolerance;
@@ -37,28 +39,34 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
-@Setter(AccessLevel.PACKAGE)
-public class AllergyIntoleranceTranslatorImpl extends BaseReferenceHandlingTranslator implements AllergyIntoleranceTranslator {
+public class AllergyIntoleranceTranslatorImpl implements AllergyIntoleranceTranslator {
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private PractitionerReferenceTranslator<User> practitionerReferenceTranslator;
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private PatientReferenceTranslator patientReferenceTranslator;
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private ConceptTranslator conceptTranslator;
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private AllergyIntoleranceSeverityTranslator severityTranslator;
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private AllergyIntoleranceCriticalityTranslator criticalityTranslator;
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private AllergyIntoleranceCategoryTranslator categoryTranslator;
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private AllergyIntoleranceReactionComponentTranslator reactionComponentTranslator;
 	
 	@Override
@@ -67,6 +75,7 @@ public class AllergyIntoleranceTranslatorImpl extends BaseReferenceHandlingTrans
 		
 		AllergyIntolerance allergy = new AllergyIntolerance();
 		allergy.setId(omrsAllergy.getUuid());
+		allergy.setCode(toCodeableConcept(omrsAllergy.getAllergen()));
 		if (omrsAllergy.getAllergen() != null) {
 			allergy.addCategory(categoryTranslator.toFhirResource(omrsAllergy.getAllergen().getAllergenType()));
 		}
@@ -81,11 +90,22 @@ public class AllergyIntoleranceTranslatorImpl extends BaseReferenceHandlingTrans
 		allergy.setCriticality(
 		    criticalityTranslator.toFhirResource(severityTranslator.toFhirResource(omrsAllergy.getSeverity())));
 		allergy.addReaction(reactionComponentTranslator.toFhirResource(omrsAllergy));
-		allergy.setCode(allergy.getReactionFirstRep().getSubstance());
 		
 		allergy.getMeta().setLastUpdated(getLastUpdated(omrsAllergy));
+		allergy.getMeta().setVersionId(getVersionId(omrsAllergy));
 		
 		return allergy;
+	}
+	
+	protected CodeableConcept toCodeableConcept(Allergen allergen) {
+		CodeableConcept code = new CodeableConcept();
+		if (allergen != null) {
+			code = conceptTranslator.toFhirResource(allergen.getCodedAllergen());
+			if (allergen.getNonCodedAllergen() != null) {
+				code.setText(allergen.getNonCodedAllergen());
+			}
+		}
+		return code;
 	}
 	
 	@Override
@@ -99,8 +119,8 @@ public class AllergyIntoleranceTranslatorImpl extends BaseReferenceHandlingTrans
 		notNull(allergy, "The existing Allergy should not be null");
 		notNull(fhirAllergy, "The AllergyIntolerance object should not be null");
 		
-		if (fhirAllergy.getId() != null) {
-			allergy.setUuid(fhirAllergy.getId());
+		if (fhirAllergy.hasId()) {
+			allergy.setUuid(fhirAllergy.getIdElement().getIdPart());
 		}
 		
 		if (fhirAllergy.hasCode()) {

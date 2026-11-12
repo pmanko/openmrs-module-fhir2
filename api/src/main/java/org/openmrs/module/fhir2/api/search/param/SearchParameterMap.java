@@ -16,12 +16,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import ca.uhn.fhir.rest.api.SortSpec;
+import com.google.common.reflect.TypeToken;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.springframework.util.LinkedCaseInsensitiveMap;
 
 @NoArgsConstructor
@@ -34,6 +37,14 @@ public class SearchParameterMap implements Serializable {
 	@Getter
 	private SortSpec sortSpec;
 	
+	@Getter
+	@Setter
+	private int fromIndex = 0;
+	
+	@Getter
+	@Setter
+	private int toIndex = Integer.MAX_VALUE;
+	
 	private final Map<String, List<PropParam<?>>> params = new LinkedCaseInsensitiveMap<>();
 	
 	/**
@@ -43,7 +54,7 @@ public class SearchParameterMap implements Serializable {
 	 * @param param Parameter to be added
 	 * @return {@link org.openmrs.module.fhir2.api.search.param.SearchParameterMap}
 	 */
-	public SearchParameterMap addParameter(@Nonnull String key, @Nonnull Serializable param) {
+	public SearchParameterMap addParameter(@Nonnull String key, @Nonnull Object param) {
 		return addParameter(key, null, param);
 	}
 	
@@ -55,7 +66,7 @@ public class SearchParameterMap implements Serializable {
 	 * @param param Parameter to be added
 	 * @return {@link org.openmrs.module.fhir2.api.search.param.SearchParameterMap}
 	 */
-	public SearchParameterMap addParameter(@Nonnull String key, String propertyName, @Nonnull Serializable param) {
+	public SearchParameterMap addParameter(@Nonnull String key, String propertyName, @Nonnull Object param) {
 		if (key == null || param == null) {
 			return this;
 		}
@@ -82,8 +93,16 @@ public class SearchParameterMap implements Serializable {
 	 * @return A {@link java.util.List} of {@link org.openmrs.module.fhir2.api.search.param.PropParam}
 	 *         parameters
 	 */
-	public List<PropParam<?>> getParameters(@Nonnull String key) {
-		return this.params.getOrDefault(key, new ArrayList<>());
+	@SuppressWarnings("UnstableApiUsage")
+	public <T> List<PropParam<T>> getParameters(@Nonnull String key) {
+		TypeToken<T> type = new TypeToken<T>(getClass()) {};
+		
+		@SuppressWarnings("unchecked")
+		List<PropParam<T>> result = this.params.getOrDefault(key, new ArrayList<>()).stream()
+		        .filter(param -> type.getRawType().isAssignableFrom(param.getClass())).map(param -> (PropParam<T>) param)
+		        .collect(Collectors.toList());
+		
+		return result;
 	}
 	
 	/**

@@ -10,6 +10,7 @@
 package org.openmrs.module.fhir2.providers.r3;
 
 import static lombok.AccessLevel.PACKAGE;
+import static lombok.AccessLevel.PROTECTED;
 
 import javax.annotation.Nonnull;
 
@@ -32,15 +33,17 @@ import ca.uhn.fhir.rest.api.MethodOutcome;
 import ca.uhn.fhir.rest.api.SortSpec;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.DateRangeParam;
+import ca.uhn.fhir.rest.param.HasAndListParam;
 import ca.uhn.fhir.rest.param.StringAndListParam;
 import ca.uhn.fhir.rest.param.TokenAndListParam;
 import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.collections.CollectionUtils;
-import org.hl7.fhir.convertors.conv30_40.Patient30_40;
+import org.hl7.fhir.convertors.factory.VersionConvertorFactory_30_40;
 import org.hl7.fhir.dstu3.model.AllergyIntolerance;
 import org.hl7.fhir.dstu3.model.DiagnosticReport;
 import org.hl7.fhir.dstu3.model.Encounter;
@@ -52,9 +55,12 @@ import org.hl7.fhir.dstu3.model.OperationOutcome;
 import org.hl7.fhir.dstu3.model.Patient;
 import org.hl7.fhir.dstu3.model.ProcedureRequest;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.ServiceRequest;
+import org.openmrs.module.fhir2.FhirConstants;
 import org.openmrs.module.fhir2.api.FhirPatientService;
 import org.openmrs.module.fhir2.api.annotations.R3Provider;
 import org.openmrs.module.fhir2.api.search.SearchQueryBundleProviderR3Wrapper;
+import org.openmrs.module.fhir2.api.search.param.OpenmrsPatientSearchParams;
 import org.openmrs.module.fhir2.api.search.param.PatientSearchParams;
 import org.openmrs.module.fhir2.providers.util.FhirProviderUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,10 +68,10 @@ import org.springframework.stereotype.Component;
 
 @Component("patientFhirR3ResourceProvider")
 @R3Provider
-@Setter(PACKAGE)
 public class PatientFhirResourceProvider implements IResourceProvider {
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PACKAGE, onMethod_ = @Autowired)
 	private FhirPatientService patientService;
 	
 	@Override
@@ -81,13 +87,13 @@ public class PatientFhirResourceProvider implements IResourceProvider {
 			throw new ResourceNotFoundException("Could not find patient with Id " + id.getIdPart());
 		}
 		
-		return Patient30_40.convertPatient(patient);
+		return (Patient) VersionConvertorFactory_30_40.convertResource(patient);
 	}
 	
 	@Create
 	public MethodOutcome createPatient(@ResourceParam Patient patient) {
-		return FhirProviderUtils
-		        .buildCreate(Patient30_40.convertPatient(patientService.create(Patient30_40.convertPatient(patient))));
+		return FhirProviderUtils.buildCreate(VersionConvertorFactory_30_40.convertResource(
+		    patientService.create((org.hl7.fhir.r4.model.Patient) VersionConvertorFactory_30_40.convertResource(patient))));
 	}
 	
 	@Update
@@ -99,8 +105,9 @@ public class PatientFhirResourceProvider implements IResourceProvider {
 		
 		patient.setId(id.getIdPart());
 		
-		return FhirProviderUtils.buildUpdate(
-		    Patient30_40.convertPatient(patientService.update(id.getIdPart(), Patient30_40.convertPatient(patient))));
+		return FhirProviderUtils
+		        .buildUpdate(VersionConvertorFactory_30_40.convertResource(patientService.update(id.getIdPart(),
+		            (org.hl7.fhir.r4.model.Patient) VersionConvertorFactory_30_40.convertResource(patient))));
 	}
 	
 	@Delete
@@ -125,6 +132,7 @@ public class PatientFhirResourceProvider implements IResourceProvider {
 	        @OptionalParam(name = Patient.SP_ADDRESS_POSTALCODE) StringAndListParam postalCode,
 	        @OptionalParam(name = Patient.SP_ADDRESS_COUNTRY) StringAndListParam country,
 	        @OptionalParam(name = Patient.SP_RES_ID) TokenAndListParam id,
+	        @OptionalParam(name = FhirConstants.HAS_SEARCH_HANDLER) HasAndListParam hasAndListParam,
 	        @OptionalParam(name = "_lastUpdated") DateRangeParam lastUpdated, @Sort SortSpec sort,
 	        @IncludeParam(reverse = true, allow = { "Observation:" + Observation.SP_PATIENT,
 	                "AllergyIntolerance:" + AllergyIntolerance.SP_PATIENT, "DiagnosticReport:" + DiagnosticReport.SP_PATIENT,
@@ -135,9 +143,39 @@ public class PatientFhirResourceProvider implements IResourceProvider {
 			revIncludes = null;
 		}
 		
+		return new SearchQueryBundleProviderR3Wrapper(patientService
+		        .searchForPatients(new PatientSearchParams(name, given, family, identifier, gender, birthDate, deathDate,
+		                deceased, city, state, postalCode, country, id, hasAndListParam, lastUpdated, sort, revIncludes)));
+	}
+	
+	@Search(queryName = "openmrsPatients")
+	@SuppressWarnings("unused")
+	public IBundleProvider searchOpenmrsPatients(@OptionalParam(name = "q") StringAndListParam query,
+	        @OptionalParam(name = org.hl7.fhir.r4.model.Patient.SP_GENDER) TokenAndListParam gender,
+	        @OptionalParam(name = org.hl7.fhir.r4.model.Patient.SP_BIRTHDATE) DateRangeParam birthDate,
+	        @OptionalParam(name = org.hl7.fhir.r4.model.Patient.SP_DEATH_DATE) DateRangeParam deathDate,
+	        @OptionalParam(name = org.hl7.fhir.r4.model.Patient.SP_DECEASED) TokenAndListParam deceased,
+	        @OptionalParam(name = org.hl7.fhir.r4.model.Patient.SP_ADDRESS_CITY) StringAndListParam city,
+	        @OptionalParam(name = org.hl7.fhir.r4.model.Patient.SP_ADDRESS_STATE) StringAndListParam state,
+	        @OptionalParam(name = org.hl7.fhir.r4.model.Patient.SP_ADDRESS_POSTALCODE) StringAndListParam postalCode,
+	        @OptionalParam(name = org.hl7.fhir.r4.model.Patient.SP_ADDRESS_COUNTRY) StringAndListParam country,
+	        @OptionalParam(name = org.hl7.fhir.r4.model.Patient.SP_RES_ID) TokenAndListParam id,
+	        @OptionalParam(name = FhirConstants.HAS_SEARCH_HANDLER) HasAndListParam hasAndListParam,
+	        @OptionalParam(name = "_lastUpdated") DateRangeParam lastUpdated, @Sort SortSpec sort,
+	        @IncludeParam(reverse = true, allow = { "Observation:" + org.hl7.fhir.r4.model.Observation.SP_PATIENT,
+	                "AllergyIntolerance:" + org.hl7.fhir.r4.model.AllergyIntolerance.SP_PATIENT,
+	                "DiagnosticReport:" + org.hl7.fhir.r4.model.DiagnosticReport.SP_PATIENT,
+	                "Encounter:" + org.hl7.fhir.r4.model.Encounter.SP_PATIENT,
+	                "MedicationRequest:" + org.hl7.fhir.r4.model.MedicationRequest.SP_PATIENT,
+	                "ServiceRequest:" + ServiceRequest.SP_PATIENT, "MedicationDispense:"
+	                        + org.hl7.fhir.r4.model.MedicationDispense.SP_PRESCRIPTION }) HashSet<Include> revIncludes) {
+		if (CollectionUtils.isEmpty(revIncludes)) {
+			revIncludes = null;
+		}
+		
 		return new SearchQueryBundleProviderR3Wrapper(
-		        patientService.searchForPatients(new PatientSearchParams(name, given, family, identifier, gender, birthDate,
-		                deathDate, deceased, city, state, postalCode, country, id, lastUpdated, sort, revIncludes)));
+		        patientService.searchForPatients(new OpenmrsPatientSearchParams(query, gender, birthDate, deathDate,
+		                deceased, city, state, postalCode, country, id, hasAndListParam, lastUpdated, sort, revIncludes)));
 	}
 	
 	/**

@@ -10,6 +10,7 @@
 package org.openmrs.module.fhir2.providers.r3;
 
 import static lombok.AccessLevel.PACKAGE;
+import static lombok.AccessLevel.PROTECTED;
 
 import javax.annotation.Nonnull;
 
@@ -33,9 +34,10 @@ import ca.uhn.fhir.rest.param.TokenAndListParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.collections.CollectionUtils;
-import org.hl7.fhir.convertors.conv30_40.Practitioner30_40;
+import org.hl7.fhir.convertors.factory.VersionConvertorFactory_30_40;
 import org.hl7.fhir.dstu3.model.Encounter;
 import org.hl7.fhir.dstu3.model.IdType;
 import org.hl7.fhir.dstu3.model.MedicationDispense;
@@ -47,16 +49,17 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.openmrs.module.fhir2.api.FhirPractitionerService;
 import org.openmrs.module.fhir2.api.annotations.R3Provider;
 import org.openmrs.module.fhir2.api.search.SearchQueryBundleProviderR3Wrapper;
+import org.openmrs.module.fhir2.api.search.param.PractitionerSearchParams;
 import org.openmrs.module.fhir2.providers.util.FhirProviderUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component("practitionerFhirR3ResourceProvider")
 @R3Provider
-@Setter(PACKAGE)
 public class PractitionerFhirResourceProvider implements IResourceProvider {
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PACKAGE, onMethod_ = @Autowired)
 	private FhirPractitionerService practitionerService;
 	
 	@Override
@@ -72,13 +75,13 @@ public class PractitionerFhirResourceProvider implements IResourceProvider {
 			throw new ResourceNotFoundException("Could not find practitioner with Id " + id.getIdPart());
 		}
 		
-		return Practitioner30_40.convertPractitioner(practitioner);
+		return (Practitioner) VersionConvertorFactory_30_40.convertResource(practitioner);
 	}
 	
 	@Create
 	public MethodOutcome createPractitioner(@ResourceParam Practitioner practitioner) {
-		return FhirProviderUtils.buildCreate(Practitioner30_40
-		        .convertPractitioner(practitionerService.create(Practitioner30_40.convertPractitioner(practitioner))));
+		return FhirProviderUtils.buildCreate(VersionConvertorFactory_30_40.convertResource(practitionerService
+		        .create((org.hl7.fhir.r4.model.Practitioner) VersionConvertorFactory_30_40.convertResource(practitioner))));
 	}
 	
 	@Update
@@ -90,8 +93,9 @@ public class PractitionerFhirResourceProvider implements IResourceProvider {
 		
 		practitioner.setId(id.getIdPart());
 		
-		return FhirProviderUtils.buildUpdate(Practitioner30_40.convertPractitioner(
-		    practitionerService.update(id.getIdPart(), Practitioner30_40.convertPractitioner(practitioner))));
+		return FhirProviderUtils
+		        .buildUpdate(VersionConvertorFactory_30_40.convertResource(practitionerService.update(id.getIdPart(),
+		            (org.hl7.fhir.r4.model.Practitioner) VersionConvertorFactory_30_40.convertResource(practitioner))));
 	}
 	
 	@Delete
@@ -120,8 +124,9 @@ public class PractitionerFhirResourceProvider implements IResourceProvider {
 			revIncludes = null;
 		}
 		
-		return new SearchQueryBundleProviderR3Wrapper(practitionerService.searchForPractitioners(identifier, name, given,
-		    family, city, state, postalCode, country, id, lastUpdated, revIncludes));
+		return new SearchQueryBundleProviderR3Wrapper(
+		        practitionerService.searchForPractitioners(new PractitionerSearchParams(identifier, name, given, family,
+		                city, state, postalCode, country, id, lastUpdated, revIncludes)));
 	}
 	
 }

@@ -20,6 +20,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.startsWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
@@ -33,8 +34,8 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 
 import ca.uhn.fhir.model.api.Include;
 import ca.uhn.fhir.rest.param.DateRangeParam;
@@ -56,6 +57,7 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.openmrs.module.fhir2.FhirConstants;
 import org.openmrs.module.fhir2.api.FhirPatientService;
+import org.openmrs.module.fhir2.api.search.param.OpenmrsPatientSearchParams;
 import org.openmrs.module.fhir2.api.search.param.PatientSearchParams;
 import org.openmrs.module.fhir2.providers.r4.MockIBundleProvider;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -89,6 +91,9 @@ public class PatientFhirR3ResourceProviderWebTest extends BaseFhirR3ResourceProv
 	@Captor
 	private ArgumentCaptor<PatientSearchParams> patientSearchParamsCaptor;
 	
+	@Captor
+	private ArgumentCaptor<OpenmrsPatientSearchParams> openmrsPatientSearchParamsCaptor;
+	
 	@Override
 	@Before
 	public void setup() throws ServletException {
@@ -106,7 +111,7 @@ public class PatientFhirR3ResourceProviderWebTest extends BaseFhirR3ResourceProv
 		MockHttpServletResponse response = get("/Patient/" + PATIENT_UUID).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), equalTo(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		
 		Patient resource = readResponse(response);
 		assertThat(resource.getIdElement().getIdPart(), equalTo(PATIENT_UUID));
@@ -498,7 +503,7 @@ public class PatientFhirR3ResourceProviderWebTest extends BaseFhirR3ResourceProv
 		verifyUri("/Patient?_revinclude=Observation:patient");
 		
 		verify(patientService).searchForPatients(patientSearchParamsCaptor.capture());
-		HashSet<Include> revIncludesParam = patientSearchParamsCaptor.getValue().getRevIncludes();
+		Set<Include> revIncludesParam = patientSearchParamsCaptor.getValue().getRevIncludes();
 		
 		assertThat(revIncludesParam, notNullValue());
 		assertThat(revIncludesParam.size(), equalTo(1));
@@ -511,7 +516,7 @@ public class PatientFhirR3ResourceProviderWebTest extends BaseFhirR3ResourceProv
 		verifyUri("/Patient?_revinclude=AllergyIntolerance:patient");
 		
 		verify(patientService).searchForPatients(patientSearchParamsCaptor.capture());
-		HashSet<Include> revIncludesParam = patientSearchParamsCaptor.getValue().getRevIncludes();
+		Set<Include> revIncludesParam = patientSearchParamsCaptor.getValue().getRevIncludes();
 		
 		assertThat(revIncludesParam, notNullValue());
 		assertThat(revIncludesParam.size(), equalTo(1));
@@ -524,7 +529,7 @@ public class PatientFhirR3ResourceProviderWebTest extends BaseFhirR3ResourceProv
 		verifyUri("/Patient?_revinclude=DiagnosticReport:patient");
 		
 		verify(patientService).searchForPatients(patientSearchParamsCaptor.capture());
-		HashSet<Include> revIncludesParam = patientSearchParamsCaptor.getValue().getRevIncludes();
+		Set<Include> revIncludesParam = patientSearchParamsCaptor.getValue().getRevIncludes();
 		
 		assertThat(revIncludesParam, notNullValue());
 		assertThat(revIncludesParam.size(), equalTo(1));
@@ -537,7 +542,7 @@ public class PatientFhirR3ResourceProviderWebTest extends BaseFhirR3ResourceProv
 		verifyUri("/Patient?_revinclude=Encounter:patient");
 		
 		verify(patientService).searchForPatients(patientSearchParamsCaptor.capture());
-		HashSet<Include> revIncludesParam = patientSearchParamsCaptor.getValue().getRevIncludes();
+		Set<Include> revIncludesParam = patientSearchParamsCaptor.getValue().getRevIncludes();
 		
 		assertThat(revIncludesParam, notNullValue());
 		assertThat(revIncludesParam.size(), equalTo(1));
@@ -550,7 +555,7 @@ public class PatientFhirR3ResourceProviderWebTest extends BaseFhirR3ResourceProv
 		verifyUri("/Patient?_revinclude=MedicationRequest:patient");
 		
 		verify(patientService).searchForPatients(patientSearchParamsCaptor.capture());
-		HashSet<Include> revIncludesParam = patientSearchParamsCaptor.getValue().getRevIncludes();
+		Set<Include> revIncludesParam = patientSearchParamsCaptor.getValue().getRevIncludes();
 		
 		assertThat(revIncludesParam, notNullValue());
 		assertThat(revIncludesParam.size(), equalTo(1));
@@ -563,7 +568,7 @@ public class PatientFhirR3ResourceProviderWebTest extends BaseFhirR3ResourceProv
 		verifyUri("/Patient?_revinclude=ProcedureRequest:patient");
 		
 		verify(patientService).searchForPatients(patientSearchParamsCaptor.capture());
-		HashSet<Include> revIncludesParam = patientSearchParamsCaptor.getValue().getRevIncludes();
+		Set<Include> revIncludesParam = patientSearchParamsCaptor.getValue().getRevIncludes();
 		
 		assertThat(revIncludesParam, notNullValue());
 		assertThat(revIncludesParam.size(), equalTo(1));
@@ -576,7 +581,7 @@ public class PatientFhirR3ResourceProviderWebTest extends BaseFhirR3ResourceProv
 		verifyUri("/Patient?_revinclude=Observation:patient&_revinclude=AllergyIntolerance:patient");
 		
 		verify(patientService).searchForPatients(patientSearchParamsCaptor.capture());
-		HashSet<Include> revIncludesParam = patientSearchParamsCaptor.getValue().getRevIncludes();
+		Set<Include> revIncludesParam = patientSearchParamsCaptor.getValue().getRevIncludes();
 		
 		assertThat(revIncludesParam, notNullValue());
 		assertThat(revIncludesParam.size(), equalTo(2));
@@ -587,16 +592,31 @@ public class PatientFhirR3ResourceProviderWebTest extends BaseFhirR3ResourceProv
 		    hasProperty("paramType", equalTo(FhirConstants.ALLERGY_INTOLERANCE)))));
 	}
 	
+	@Test
+	public void shouldSupportCustomOpenmrsQuery() throws Exception {
+		verifyUri("/Patient/?_query=openmrsPatients&q=Hannibal Lector");
+		
+		verify(patientService).searchForPatients(openmrsPatientSearchParamsCaptor.capture());
+		StringAndListParam queryParam = openmrsPatientSearchParamsCaptor.getValue().getQuery();
+		
+		assertThat(queryParam, notNullValue());
+		assertThat(queryParam.getValuesAsQueryTokens(), not(empty()));
+		assertThat(queryParam.getValuesAsQueryTokens().get(0).getValuesAsQueryTokens().get(0).getValue(),
+		    equalTo("Hannibal Lector"));
+	}
+	
 	private void verifyUri(String uri) throws Exception {
 		Patient patient = new Patient();
 		patient.setId(PATIENT_UUID);
-		when(patientService.searchForPatients(any()))
+		when(patientService.searchForPatients(any(PatientSearchParams.class)))
+		        .thenReturn(new MockIBundleProvider<>(Collections.singletonList(patient), 10, 1));
+		when(patientService.searchForPatients(any(OpenmrsPatientSearchParams.class)))
 		        .thenReturn(new MockIBundleProvider<>(Collections.singletonList(patient), 10, 1));
 		
 		MockHttpServletResponse response = get(uri).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), equalTo(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		
 		Bundle results = readBundleResponse(response);
 		assertThat(results.hasEntry(), is(true));
@@ -677,7 +697,7 @@ public class PatientFhirR3ResourceProviderWebTest extends BaseFhirR3ResourceProv
 		MockHttpServletResponse response = delete("/Patient/" + PATIENT_UUID).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), equalTo(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 	}
 	
 	@Test
@@ -687,7 +707,7 @@ public class PatientFhirR3ResourceProviderWebTest extends BaseFhirR3ResourceProv
 		MockHttpServletResponse response = delete("/Patient/" + BAD_PATIENT_UUID).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isNotFound());
-		assertThat(response.getContentType(), equalTo(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 	}
 	
 	@Test
@@ -717,7 +737,7 @@ public class PatientFhirR3ResourceProviderWebTest extends BaseFhirR3ResourceProv
 		MockHttpServletResponse response = get(uri).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), equalTo(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		
 		Bundle results = readBundleResponse(response);
 		assertThat(results.getEntry(), notNullValue());
@@ -736,7 +756,7 @@ public class PatientFhirR3ResourceProviderWebTest extends BaseFhirR3ResourceProv
 		MockHttpServletResponse response = get(uri).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), equalTo(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		
 		Bundle results = readBundleResponse(response);
 		assertThat(results.getEntry(), notNullValue());

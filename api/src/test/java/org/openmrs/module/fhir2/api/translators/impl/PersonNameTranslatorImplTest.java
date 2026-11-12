@@ -22,9 +22,12 @@ import org.hl7.fhir.r4.model.HumanName;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.junit.MockitoJUnitRunner;
 import org.openmrs.PersonName;
 import org.openmrs.module.fhir2.FhirConstants;
 
+@RunWith(MockitoJUnitRunner.class)
 public class PersonNameTranslatorImplTest {
 	
 	private static final String PERSON_NAME_UUID = "123456-abcdef-123456";

@@ -10,6 +10,7 @@
 package org.openmrs.module.fhir2.providers.r4;
 
 import static lombok.AccessLevel.PACKAGE;
+import static lombok.AccessLevel.PROTECTED;
 
 import javax.annotation.Nonnull;
 
@@ -21,20 +22,24 @@ import ca.uhn.fhir.rest.annotation.Delete;
 import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.IncludeParam;
 import ca.uhn.fhir.rest.annotation.OptionalParam;
+import ca.uhn.fhir.rest.annotation.Patch;
 import ca.uhn.fhir.rest.annotation.Read;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
 import ca.uhn.fhir.rest.annotation.Search;
 import ca.uhn.fhir.rest.annotation.Sort;
 import ca.uhn.fhir.rest.annotation.Update;
 import ca.uhn.fhir.rest.api.MethodOutcome;
+import ca.uhn.fhir.rest.api.PatchTypeEnum;
 import ca.uhn.fhir.rest.api.SortSpec;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
+import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.param.DateRangeParam;
 import ca.uhn.fhir.rest.param.ReferenceAndListParam;
 import ca.uhn.fhir.rest.param.TokenAndListParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.collections.CollectionUtils;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -45,16 +50,17 @@ import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.Patient;
 import org.openmrs.module.fhir2.api.FhirAllergyIntoleranceService;
 import org.openmrs.module.fhir2.api.annotations.R4Provider;
+import org.openmrs.module.fhir2.api.search.param.FhirAllergyIntoleranceSearchParams;
 import org.openmrs.module.fhir2.providers.util.FhirProviderUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component("allergyIntoleranceFhirR4ResourceProvider")
 @R4Provider
-@Setter(PACKAGE)
 public class AllergyIntoleranceFhirResourceProvider implements IResourceProvider {
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PACKAGE, onMethod_ = @Autowired)
 	private FhirAllergyIntoleranceService fhirAllergyIntoleranceService;
 	
 	@Override
@@ -97,8 +103,8 @@ public class AllergyIntoleranceFhirResourceProvider implements IResourceProvider
 			includes = null;
 		}
 		
-		return fhirAllergyIntoleranceService.searchForAllergies(patientReference, category, allergen, severity,
-		    manifestationCode, clinicalStatus, id, lastUpdated, sort, includes);
+		return fhirAllergyIntoleranceService.searchForAllergies(new FhirAllergyIntoleranceSearchParams(patientReference,
+		        category, allergen, severity, manifestationCode, clinicalStatus, id, lastUpdated, sort, includes));
 	}
 	
 	@Create
@@ -117,6 +123,19 @@ public class AllergyIntoleranceFhirResourceProvider implements IResourceProvider
 		allergy.setId(id.getIdPart());
 		
 		return FhirProviderUtils.buildUpdate(fhirAllergyIntoleranceService.update(id.getIdPart(), allergy));
+	}
+	
+	@Patch
+	public MethodOutcome patchAllergy(@IdParam IdType id, PatchTypeEnum patchType, @ResourceParam String body,
+	        RequestDetails requestDetails) {
+		if (id == null || id.getIdPart() == null) {
+			throw new InvalidRequestException("id must be specified to patch AllergyIntolerance resource");
+		}
+		
+		AllergyIntolerance allergyIntolerance = fhirAllergyIntoleranceService.patch(id.getIdPart(), patchType, body,
+		    requestDetails);
+		
+		return FhirProviderUtils.buildPatch(allergyIntolerance);
 	}
 	
 	@Delete

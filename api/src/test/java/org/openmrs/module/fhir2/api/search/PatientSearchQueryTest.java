@@ -28,7 +28,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.startsWith;
 import static org.hl7.fhir.r4.model.Patient.SP_FAMILY;
 import static org.hl7.fhir.r4.model.Patient.SP_GIVEN;
-import static org.mockito.Mockito.when;
+import static org.openmrs.module.fhir2.matchers.FhirMatchers.isDeceased;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -57,18 +57,14 @@ import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.ServiceRequest;
 import org.junit.Before;
 import org.junit.Test;
+import org.openmrs.module.fhir2.BaseFhirContextSensitiveTest;
 import org.openmrs.module.fhir2.FhirConstants;
-import org.openmrs.module.fhir2.TestFhirSpringConfiguration;
-import org.openmrs.module.fhir2.api.FhirGlobalPropertyService;
 import org.openmrs.module.fhir2.api.dao.FhirPatientDao;
 import org.openmrs.module.fhir2.api.search.param.SearchParameterMap;
 import org.openmrs.module.fhir2.api.translators.PatientTranslator;
-import org.openmrs.test.BaseModuleContextSensitiveTest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.ContextConfiguration;
 
-@ContextConfiguration(classes = TestFhirSpringConfiguration.class, inheritLocations = false)
-public class PatientSearchQueryTest extends BaseModuleContextSensitiveTest {
+public class PatientSearchQueryTest extends BaseFhirContextSensitiveTest {
 	
 	private static final String[] PATIENT_SEARCH_DATA_FILES = {
 	        "org/openmrs/module/fhir2/api/dao/impl/FhirPatientDaoImplTest_initial_data.xml",
@@ -114,6 +110,10 @@ public class PatientSearchQueryTest extends BaseModuleContextSensitiveTest {
 	
 	private static final String PATIENT_BIRTHDATE_PATIENT_UUID = "ca17fcc5-ec96-487f-b9ea-42973c8973e3";
 	
+	private static final String PATIENT_DEATH_DATE = "2003-01-01";
+	
+	private static final String PATIENT_DEATH_DATE_LOWER_BOUND = "2001-08-01";
+	
 	private static final String PATIENT_ADDRESS_CITY = "Indianapolis";
 	
 	private static final String PATIENT_ADDRESS_STATE = "IN";
@@ -144,9 +144,6 @@ public class PatientSearchQueryTest extends BaseModuleContextSensitiveTest {
 	private SearchQueryInclude<Patient> searchQueryInclude;
 	
 	@Autowired
-	private FhirGlobalPropertyService globalPropertyService;
-	
-	@Autowired
 	private SearchQuery<org.openmrs.Patient, Patient, FhirPatientDao, PatientTranslator, SearchQueryInclude<Patient>> searchQuery;
 	
 	@Before
@@ -154,15 +151,6 @@ public class PatientSearchQueryTest extends BaseModuleContextSensitiveTest {
 		for (String search_data : PATIENT_SEARCH_DATA_FILES) {
 			executeDataSet(search_data);
 		}
-	}
-	
-	@Before
-	public void setupMocks() {
-		SEVERITY_CONCEPT_UUIDS.put(FhirConstants.GLOBAL_PROPERTY_SEVERE, SEVERITY_SEVERE_CONCEPT_UUID);
-		
-		when(globalPropertyService.getGlobalProperties(FhirConstants.GLOBAL_PROPERTY_MILD,
-		    FhirConstants.GLOBAL_PROPERTY_MODERATE, FhirConstants.GLOBAL_PROPERTY_SEVERE,
-		    FhirConstants.GLOBAL_PROPERTY_OTHER)).thenReturn(SEVERITY_CONCEPT_UUIDS);
 	}
 	
 	private IBundleProvider search(SearchParameterMap theParams) {
@@ -372,6 +360,50 @@ public class PatientSearchQueryTest extends BaseModuleContextSensitiveTest {
 	}
 	
 	@Test
+	public void searchForPatients_shouldSearchForPatientWithQueryByGivenName() {
+		SearchParameterMap theParams = new SearchParameterMap().addParameter(FhirConstants.QUERY_SEARCH_HANDLER,
+		    new StringAndListParam().addAnd(new StringParam(PATIENT_GIVEN_NAME)));
+		IBundleProvider results = search(theParams);
+		
+		assertThat(results, notNullValue());
+		assertThat(results.size(), greaterThanOrEqualTo(1));
+		
+		List<Patient> resultList = get(results);
+		
+		assertThat(resultList, not(empty()));
+		assertThat(resultList.get(0).getNameFirstRep().getGiven().get(0).toString(), startsWith(PATIENT_GIVEN_NAME));
+	}
+	
+	@Test
+	public void searchForPatients_shouldSearchForPatientWithQueryByFamilyName() {
+		SearchParameterMap theParams = new SearchParameterMap().addParameter(FhirConstants.QUERY_SEARCH_HANDLER,
+		    new StringAndListParam().addAnd(new StringParam(PATIENT_FAMILY_NAME)));
+		IBundleProvider results = search(theParams);
+		
+		assertThat(results, notNullValue());
+		assertThat(results.size(), greaterThanOrEqualTo(1));
+		
+		List<Patient> resultList = get(results);
+		
+		assertThat(resultList, not(empty()));
+		assertThat(resultList.get(0).getNameFirstRep().getFamily(), startsWith(PATIENT_FAMILY_NAME));
+	}
+	
+	@Test
+	public void searchForPatients_shouldSearchForPatientWithQueryByIdentifier() {
+		SearchParameterMap theParams = new SearchParameterMap().addParameter(FhirConstants.QUERY_SEARCH_HANDLER,
+		    new StringAndListParam().addAnd(new StringParam(PATIENT_IDENTIFIER)));
+		IBundleProvider results = search(theParams);
+		
+		assertThat(results, notNullValue());
+		assertThat(results.size(), equalTo(1));
+		
+		List<Patient> resultList = get(results);
+		
+		assertThat(resultList, hasSize(equalTo(1)));
+	}
+	
+	@Test
 	public void searchForPatients_shouldReturnPatientsByGender() {
 		final String GENDER_PROPERTY = "gender";
 		SearchParameterMap theParams = new SearchParameterMap().addParameter(FhirConstants.GENDER_SEARCH_HANDLER, "gender",
@@ -562,6 +594,89 @@ public class PatientSearchQueryTest extends BaseModuleContextSensitiveTest {
 	}
 	
 	@Test
+	public void searchForPatients_shouldSearchForPatientsByDeceasedStatus() {
+		SearchParameterMap theParams = new SearchParameterMap().addParameter(FhirConstants.BOOLEAN_SEARCH_HANDLER,
+		    FhirConstants.DECEASED_PROPERTY, new TokenAndListParam().addAnd(new TokenParam("true")));
+		
+		IBundleProvider results = search(theParams);
+		
+		assertThat(results, notNullValue());
+		assertThat(results.size(), equalTo(2));
+		
+		List<Patient> resultList = get(results);
+		
+		assertThat(resultList, hasSize(equalTo(2)));
+		assertThat(resultList, everyItem(isDeceased()));
+	}
+	
+	@Test
+	public void searchForPatients_shouldSearchForPatientsByDeceasedDate() {
+		SearchParameterMap theParams = new SearchParameterMap().addParameter(FhirConstants.DATE_RANGE_SEARCH_HANDLER,
+		    FhirConstants.DEATHDATE_PROPERTY, new DateRangeParam().setLowerBound(PATIENT_DEATH_DATE));
+		
+		IBundleProvider results = search(theParams);
+		
+		assertThat(results, notNullValue());
+		assertThat(results.size(), equalTo(1));
+		
+		List<Patient> resultList = get(results);
+		
+		assertThat(resultList, hasSize(equalTo(1)));
+		assertThat(resultList, everyItem(isDeceased()));
+	}
+	
+	@Test
+	public void searchForPatients_shouldSearchForPatientsByDeceasedDateWithLowerBound() {
+		SearchParameterMap theParams = new SearchParameterMap().addParameter(FhirConstants.DATE_RANGE_SEARCH_HANDLER,
+		    FhirConstants.DEATHDATE_PROPERTY, new DateRangeParam().setLowerBound(PATIENT_DEATH_DATE));
+		
+		IBundleProvider results = search(theParams);
+		
+		assertThat(results, notNullValue());
+		assertThat(results.size(), greaterThanOrEqualTo(1));
+		
+		List<Patient> resultList = get(results);
+		
+		assertThat(resultList, not(empty()));
+		assertThat(resultList, everyItem(isDeceased()));
+	}
+	
+	@Test
+	public void searchForPatients_shouldSearchForPatientsByDeathDateWithUpperBound() {
+		SearchParameterMap theParams = new SearchParameterMap().addParameter(FhirConstants.DATE_RANGE_SEARCH_HANDLER,
+		    FhirConstants.DEATHDATE_PROPERTY, new DateRangeParam().setUpperBound(PATIENT_DEATH_DATE));
+		
+		IBundleProvider results = search(theParams);
+		
+		assertThat(results, notNullValue());
+		assertThat(results.size(), greaterThan(1));
+		
+		List<Patient> resultList = get(results);
+		
+		assertThat(resultList, not(empty()));
+		assertThat(resultList, hasSize(greaterThan(1)));
+		assertThat(resultList, everyItem(isDeceased()));
+	}
+	
+	@Test
+	public void searchForPatients_shouldSearchForPatientsByDeathDateWithinBoundaries() {
+		SearchParameterMap theParams = new SearchParameterMap().addParameter(FhirConstants.DATE_RANGE_SEARCH_HANDLER,
+		    FhirConstants.DEATHDATE_PROPERTY,
+		    new DateRangeParam().setLowerBound(PATIENT_DEATH_DATE_LOWER_BOUND).setUpperBound(PATIENT_DEATH_DATE));
+		
+		IBundleProvider results = search(theParams);
+		
+		assertThat(results, notNullValue());
+		assertThat(results.size(), greaterThan(1));
+		
+		List<Patient> resultList = get(results);
+		
+		assertThat(resultList, not(empty()));
+		assertThat(resultList, hasSize(greaterThan(1)));
+		assertThat(resultList, everyItem(isDeceased()));
+	}
+	
+	@Test
 	public void searchForPatients_shouldSearchForPatientsByLastUpdatedDateCreated() {
 		DateRangeParam lastUpdated = new DateRangeParam().setUpperBound(DATE_CREATED).setLowerBound(DATE_CREATED);
 		
@@ -699,8 +814,8 @@ public class PatientSearchQueryTest extends BaseModuleContextSensitiveTest {
 		List<IBaseResource> resultList = results.getResources(START_INDEX, END_INDEX);
 		
 		assertThat(results, notNullValue());
-		assertThat(resultList.size(), equalTo(4)); // reverse included resources added as part of the result list
-		assertThat(resultList.subList(1, 4), everyItem(allOf(is(instanceOf(Encounter.class)),
+		assertThat(resultList.size(), equalTo(5)); // reverse included resources added as part of the result list
+		assertThat(resultList.subList(1, 5), everyItem(allOf(is(instanceOf(Encounter.class)),
 		    hasProperty("subject", hasProperty("referenceElement", hasProperty("idPart", equalTo(PATIENT_OTHER2_UUID)))))));
 	}
 	
@@ -815,8 +930,8 @@ public class PatientSearchQueryTest extends BaseModuleContextSensitiveTest {
 		List<IBaseResource> resultList = results.getResources(START_INDEX, END_INDEX);
 		
 		assertThat(results, notNullValue());
-		assertThat(resultList.size(), equalTo(13)); // reverse included resources (3 encounters + 9 observations) added as part of the result list
-		assertThat(resultList.subList(1, 13), everyItem(allOf(
+		assertThat(resultList.size(), equalTo(14)); // reverse included resources (3 encounters + 9 observations) added as part of the result list
+		assertThat(resultList.subList(1, 14), everyItem(allOf(
 		    anyOf(is(instanceOf(Encounter.class)), is(instanceOf(Observation.class))),
 		    hasProperty("subject", hasProperty("referenceElement", hasProperty("idPart", equalTo(PATIENT_OTHER2_UUID)))))));
 	}
@@ -1180,11 +1295,11 @@ public class PatientSearchQueryTest extends BaseModuleContextSensitiveTest {
 		IBundleProvider results = search(theParams);
 		
 		assertThat(results, notNullValue());
-		assertThat(results.size(), equalTo(15));
+		assertThat(results.size(), equalTo(16));
 		
 		List<IBaseResource> resultList = getAllResources(results);
 		
-		assertThat(resultList.size(), equalTo(15));
+		assertThat(resultList.size(), equalTo(16));
 	}
 	
 	@Test
@@ -1206,10 +1321,10 @@ public class PatientSearchQueryTest extends BaseModuleContextSensitiveTest {
 		IBundleProvider results = search(theParams);
 		
 		assertThat(results, notNullValue());
-		assertThat(results.size(), equalTo(44));
+		assertThat(results.size(), equalTo(45));
 		
 		List<IBaseResource> resultList = getAllResources(results);
 		
-		assertThat(resultList, hasSize(44));
+		assertThat(resultList, hasSize(45));
 	}
 }

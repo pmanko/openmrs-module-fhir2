@@ -10,6 +10,7 @@
 package org.openmrs.module.fhir2.providers.r4;
 
 import static lombok.AccessLevel.PACKAGE;
+import static lombok.AccessLevel.PROTECTED;
 
 import javax.annotation.Nonnull;
 
@@ -21,21 +22,23 @@ import ca.uhn.fhir.rest.annotation.Delete;
 import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.IncludeParam;
 import ca.uhn.fhir.rest.annotation.OptionalParam;
+import ca.uhn.fhir.rest.annotation.Patch;
 import ca.uhn.fhir.rest.annotation.Read;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
 import ca.uhn.fhir.rest.annotation.Search;
 import ca.uhn.fhir.rest.annotation.Sort;
-import ca.uhn.fhir.rest.annotation.Update;
 import ca.uhn.fhir.rest.api.MethodOutcome;
+import ca.uhn.fhir.rest.api.PatchTypeEnum;
 import ca.uhn.fhir.rest.api.SortSpec;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
+import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.param.DateRangeParam;
 import ca.uhn.fhir.rest.param.ReferenceAndListParam;
 import ca.uhn.fhir.rest.param.StringAndListParam;
 import ca.uhn.fhir.rest.param.TokenAndListParam;
-import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.collections.CollectionUtils;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -52,10 +55,10 @@ import org.springframework.stereotype.Component;
 
 @Component("locationFhirR4ResourceProvider")
 @R4Provider
-@Setter(PACKAGE)
-public class LocationFhirResourceProvider implements IResourceProvider {
+public class LocationFhirResourceProvider extends BaseUpsertFhirResourceProvider<Location> {
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PACKAGE, onMethod_ = @Autowired)
 	private FhirLocationService fhirLocationService;
 	
 	@Override
@@ -78,14 +81,26 @@ public class LocationFhirResourceProvider implements IResourceProvider {
 		return FhirProviderUtils.buildCreate(fhirLocationService.create(location));
 	}
 	
-	@Update
-	@SuppressWarnings("unused")
-	public MethodOutcome updateLocation(@IdParam IdType id, @ResourceParam Location location) {
+	@Override
+	public MethodOutcome doUpsert(IdType id, Location location, RequestDetails requestDetails, boolean createIfNotExists) {
 		if (id == null || id.getIdPart() == null) {
 			throw new InvalidRequestException("id must be specified to update");
 		}
 		
-		return FhirProviderUtils.buildUpdate(fhirLocationService.update(id.getIdPart(), location));
+		return FhirProviderUtils
+		        .buildUpdate(fhirLocationService.update(id.getIdPart(), location, requestDetails, createIfNotExists));
+	}
+	
+	@Patch
+	public MethodOutcome patchLocation(@IdParam IdType id, PatchTypeEnum patchType, @ResourceParam String body,
+	        RequestDetails requestDetails) {
+		if (id == null || id.getIdPart() == null) {
+			throw new InvalidRequestException("id must be specified to patch Location resource");
+		}
+		
+		Location location = fhirLocationService.patch(id.getIdPart(), patchType, body, requestDetails);
+		
+		return FhirProviderUtils.buildPatch(location);
 	}
 	
 	@Delete

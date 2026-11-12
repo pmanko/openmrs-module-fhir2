@@ -9,58 +9,30 @@
  */
 package org.openmrs.module.fhir2.api.impl;
 
-import javax.annotation.Nonnull;
-
-import java.util.Collection;
-import java.util.List;
-
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
-import ca.uhn.fhir.rest.server.SimpleBundleProvider;
-import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.Setter;
 import org.hl7.fhir.r4.model.MedicationDispense;
-import org.openmrs.annotation.OpenmrsProfile;
+import org.openmrs.module.fhir2.FhirConstants;
 import org.openmrs.module.fhir2.api.FhirMedicationDispenseService;
 import org.openmrs.module.fhir2.api.search.param.MedicationDispenseSearchParams;
+import org.openmrs.module.fhir2.api.search.param.SearchParameterMap;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
-@Transactional
-@Setter(AccessLevel.PACKAGE)
-@Getter(AccessLevel.PROTECTED)
-@OpenmrsProfile(openmrsPlatformVersion = "2.0.5 - 2.5.*")
-public class FhirMedicationDispenseServiceImpl implements FhirMedicationDispenseService {
+public class FhirMedicationDispenseServiceImpl extends BaseCompositeFhirService<MedicationDispense> implements FhirMedicationDispenseService {
 	
 	@Override
-	public MedicationDispense get(@Nonnull String uuid) {
-		throw new ResourceNotFoundException("MedicationDispense is not available in OpenMRS versions < 2.6.0");
-	}
-	
-	@Override
-	public List<MedicationDispense> get(@Nonnull Collection<String> uuids) {
-		throw new ResourceNotFoundException("MedicationDispense is not available in OpenMRS versions < 2.6.0");
-	}
-	
-	@Override
-	public MedicationDispense create(@Nonnull MedicationDispense newResource) {
-		throw new UnsupportedOperationException("MedicationDispense is not available in OpenMRS versions < 2.6.0");
-	}
-	
-	@Override
-	public MedicationDispense update(@Nonnull String uuid, @Nonnull MedicationDispense updatedResource) {
-		throw new UnsupportedOperationException("MedicationDispense is not available in OpenMRS versions < 2.6.0");
-	}
-	
-	@Override
-	public void delete(@Nonnull String uuid) {
-		throw new UnsupportedOperationException("MedicationDispense is not available in OpenMRS versions < 2.6.0");
-	}
-	
-	@Override
-	public IBundleProvider searchMedicationDispenses(MedicationDispenseSearchParams searchParams) {
-		return new SimpleBundleProvider();
+	@Transactional(readOnly = true)
+	public IBundleProvider searchMedicationDispenses(MedicationDispenseSearchParams params) {
+		SearchParameterMap theParams = new SearchParameterMap()
+		        .addParameter(FhirConstants.COMMON_SEARCH_HANDLER, FhirConstants.ID_PROPERTY, params.getId())
+		        .addParameter(FhirConstants.COMMON_SEARCH_HANDLER, FhirConstants.LAST_UPDATED_PROPERTY,
+		            params.getLastUpdated())
+		        .addParameter(FhirConstants.PATIENT_REFERENCE_SEARCH_HANDLER, params.getPatient())
+		        .addParameter(FhirConstants.ENCOUNTER_REFERENCE_SEARCH_HANDLER, params.getEncounter())
+		        .addParameter(FhirConstants.MEDICATION_REQUEST_REFERENCE_SEARCH_HANDLER, params.getMedicationRequest())
+		        .addParameter(FhirConstants.INCLUDE_SEARCH_HANDLER, params.getIncludes()).setSortSpec(params.getSort());
+		
+		return doSearch(theParams);
 	}
 }

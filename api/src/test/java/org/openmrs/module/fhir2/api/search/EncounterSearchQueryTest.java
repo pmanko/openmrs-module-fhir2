@@ -12,6 +12,7 @@ package org.openmrs.module.fhir2.api.search;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.anyOf;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.equalTo;
@@ -27,10 +28,10 @@ import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertNotNull;
+import static org.openmrs.test.OpenmrsMatchers.hasId;
 
 import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import ca.uhn.fhir.model.api.Include;
@@ -53,17 +54,14 @@ import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Practitioner;
 import org.hl7.fhir.r4.model.ServiceRequest;
 import org.junit.Test;
+import org.openmrs.module.fhir2.BaseFhirContextSensitiveTest;
 import org.openmrs.module.fhir2.FhirConstants;
-import org.openmrs.module.fhir2.TestFhirSpringConfiguration;
 import org.openmrs.module.fhir2.api.dao.FhirEncounterDao;
 import org.openmrs.module.fhir2.api.search.param.SearchParameterMap;
 import org.openmrs.module.fhir2.api.translators.EncounterTranslator;
-import org.openmrs.test.BaseModuleContextSensitiveTest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.ContextConfiguration;
 
-@ContextConfiguration(classes = TestFhirSpringConfiguration.class, inheritLocations = false)
-public class EncounterSearchQueryTest extends BaseModuleContextSensitiveTest {
+public class EncounterSearchQueryTest extends BaseFhirContextSensitiveTest {
 	
 	private static final String ENC_UUID = "eec646cb-c847-45a7-98bc-91c8c4f70add";
 	
@@ -215,8 +213,8 @@ public class EncounterSearchQueryTest extends BaseModuleContextSensitiveTest {
 		assertThat(results, notNullValue());
 		assertThat(results.size(), equalTo(1));
 		
-		Set<Integer> resultSet = new HashSet<>(dao.getSearchResultIds(theParams));
-		assertThat(resultSet, hasSize(1)); // 3 with repetitions
+		List<org.openmrs.Encounter> resultSet = dao.getSearchResults(theParams);
+		assertThat(resultSet, containsInAnyOrder(hasId(6))); // 3 with repetitions
 	}
 	
 	@Test
@@ -306,8 +304,8 @@ public class EncounterSearchQueryTest extends BaseModuleContextSensitiveTest {
 		assertThat(results, notNullValue());
 		assertThat(results.size(), equalTo(1));
 		
-		Set<Integer> resultSet = new HashSet<>(dao.getSearchResultIds(theParams));
-		assertThat(resultSet.size(), equalTo(1)); // 3 with repetitions
+		List<org.openmrs.Encounter> resultSet = dao.getSearchResults(theParams);
+		assertThat(resultSet, containsInAnyOrder(hasId(6))); // 3 with repetitions
 	}
 	
 	@Test
@@ -397,8 +395,8 @@ public class EncounterSearchQueryTest extends BaseModuleContextSensitiveTest {
 		assertThat(results, notNullValue());
 		assertThat(results.size(), equalTo(1));
 		
-		Set<Integer> resultSet = new HashSet<>(dao.getSearchResultIds(theParams));
-		assertThat(resultSet, hasSize(1)); // 2 with repetitions
+		List<org.openmrs.Encounter> resultSet = dao.getSearchResults(theParams);
+		assertThat(resultSet, containsInAnyOrder(hasId(6))); // 2 with repetitions
 	}
 	
 	@Test
@@ -1379,6 +1377,34 @@ public class EncounterSearchQueryTest extends BaseModuleContextSensitiveTest {
 		assertThat(resultList.size(), equalTo(7)); // reverse included resources added as part of the result list
 		assertThat(resultList.subList(1, 7), everyItem(allOf(is(instanceOf(Observation.class)),
 		    hasProperty("encounter", hasProperty("referenceElement", hasProperty("idPart", equalTo(ENC_UUID)))))));
+	}
+	
+	@Test
+	public void searchForEncounters_shouldApplyIteratedIncludesAlongsideReverseIncludes() {
+		// GET /Encounter?_id={ENCOUNTER_UUID}&_include:iterate=Encounter:patient&_revinclude=MedicationRequest:encounter
+		// (iterated includes are also passed into the reverse include's own search, which returns MedicationRequests, so
+		// Encounter:patient must not be applied to them)
+		TokenAndListParam uuid = new TokenAndListParam().addAnd(new TokenParam(ENCOUNTER_UUID));
+		HashSet<Include> includes = new HashSet<>();
+		includes.add(new Include("Encounter:patient", true));
+		HashSet<Include> revIncludes = new HashSet<>();
+		revIncludes.add(new Include("MedicationRequest:encounter"));
+		
+		SearchParameterMap theParams = new SearchParameterMap()
+		        .addParameter(FhirConstants.COMMON_SEARCH_HANDLER, FhirConstants.ID_PROPERTY, uuid)
+		        .addParameter(FhirConstants.INCLUDE_SEARCH_HANDLER, includes)
+		        .addParameter(FhirConstants.REVERSE_INCLUDE_SEARCH_HANDLER, revIncludes);
+		
+		IBundleProvider results = search(theParams);
+		assertThat(results.size(), equalTo(1));
+		
+		List<IBaseResource> resultList = get(results);
+		
+		assertThat(resultList.size(), equalTo(8)); // the Encounter, its Patient and its 6 MedicationRequests
+		Encounter returnedEncounter = (Encounter) resultList.iterator().next();
+		assertThat(resultList, hasItem(allOf(is(instanceOf(Patient.class)),
+		    hasProperty("id", equalTo(returnedEncounter.getSubject().getReferenceElement().getIdPart())))));
+		assertThat(resultList.stream().filter(it -> it instanceof MedicationRequest).count(), equalTo(6L));
 	}
 	
 	@Test

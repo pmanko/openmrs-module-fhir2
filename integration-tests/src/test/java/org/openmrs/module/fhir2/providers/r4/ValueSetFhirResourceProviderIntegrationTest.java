@@ -34,6 +34,7 @@ import org.hl7.fhir.r4.model.ValueSet;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletResponse;
 
 public class ValueSetFhirResourceProviderIntegrationTest extends BaseFhirR4IntegrationTest<ValueSetFhirResourceProvider, ValueSet> {
@@ -64,7 +65,7 @@ public class ValueSetFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		MockHttpServletResponse response = get("/ValueSet/" + FARM_ANIMAL_CONCEPT_SET_UUID).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		ValueSet valueSet = readResponse(response);
@@ -130,7 +131,7 @@ public class ValueSetFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		MockHttpServletResponse response = get("/ValueSet/" + INVALID_UUID).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isNotFound());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
@@ -144,7 +145,7 @@ public class ValueSetFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		MockHttpServletResponse response = get("/ValueSet/" + CONCEPT_THAT_IS_NOT_SET_UUID).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isNotFound());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
@@ -158,7 +159,7 @@ public class ValueSetFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		MockHttpServletResponse response = get("/ValueSet/" + FARM_ANIMAL_CONCEPT_SET_UUID).accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		ValueSet valueSet = readResponse(response);
@@ -175,7 +176,7 @@ public class ValueSetFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		MockHttpServletResponse response = get("/ValueSet/" + INVALID_UUID).accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isNotFound());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
@@ -189,7 +190,7 @@ public class ValueSetFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		MockHttpServletResponse response = get("/ValueSet/" + CONCEPT_THAT_IS_NOT_SET_UUID).accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isNotFound());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
@@ -204,7 +205,7 @@ public class ValueSetFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		MockHttpServletResponse response = get(uri).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Bundle results = readBundleResponse(response);
@@ -228,7 +229,7 @@ public class ValueSetFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		MockHttpServletResponse response = get(uri).accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Bundle results = readBundleResponse(response);
@@ -244,6 +245,43 @@ public class ValueSetFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		assertThat(entries, everyItem(hasResource(instanceOf(ValueSet.class))));
 		assertThat(entries, everyItem(hasResource(validResource())));
 		assertThat(entries, everyItem(hasResource(hasProperty("title", equalTo("Farm Animal Set")))));
+	}
+	
+	@Test
+	public void shouldReturnAnEtagHeaderWhenRetrievingAnExistingValueSet() throws Exception {
+		MockHttpServletResponse response = get("/ValueSet/" + FARM_ANIMAL_CONCEPT_SET_UUID).accept(FhirMediaTypes.JSON).go();
+		
+		assertThat(response, isOk());
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
+		
+		assertThat(response.getHeader("etag"), notNullValue());
+		assertThat(response.getHeader("etag"), startsWith("W/"));
+		
+		assertThat(response.getContentAsString(), notNullValue());
+		
+		ValueSet valueSet = readResponse(response);
+		
+		assertThat(valueSet, notNullValue());
+		assertThat(valueSet.getMeta().getVersionId(), notNullValue());
+		assertThat(valueSet, validResource());
+	}
+	
+	@Test
+	public void shouldReturnNotModifiedWhenRetrievingAnExistingValueSetWithAnEtag() throws Exception {
+		MockHttpServletResponse response = get("/ValueSet/" + FARM_ANIMAL_CONCEPT_SET_UUID).accept(FhirMediaTypes.JSON).go();
+		
+		assertThat(response, isOk());
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentAsString(), notNullValue());
+		assertThat(response.getHeader("etag"), notNullValue());
+		
+		String etagValue = response.getHeader("etag");
+		
+		response = get("/ValueSet/" + FARM_ANIMAL_CONCEPT_SET_UUID).accept(FhirMediaTypes.JSON).ifNoneMatchHeader(etagValue)
+		        .go();
+		
+		assertThat(response, isOk());
+		assertThat(response, statusEquals(HttpStatus.NOT_MODIFIED));
 	}
 	
 }

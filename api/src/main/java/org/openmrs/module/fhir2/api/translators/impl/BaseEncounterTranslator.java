@@ -9,19 +9,21 @@
  */
 package org.openmrs.module.fhir2.api.translators.impl;
 
-import lombok.AccessLevel;
+import static lombok.AccessLevel.PROTECTED;
+
+import lombok.Getter;
 import lombok.Setter;
 import org.hl7.fhir.r4.model.Coding;
 import org.openmrs.Location;
 import org.openmrs.module.fhir2.FhirConstants;
-import org.openmrs.module.fhir2.api.mappings.EncounterClassMap;
+import org.openmrs.module.fhir2.api.dao.impl.FhirEncounterClassMapDaoImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 
-@Setter(AccessLevel.PACKAGE)
 public abstract class BaseEncounterTranslator {
 	
-	@Autowired
-	private EncounterClassMap encounterClassMap;
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
+	private FhirEncounterClassMapDaoImpl encounterClassMap;
 	
 	protected Coding mapLocationToClass(Location location) {
 		Coding coding = new Coding();

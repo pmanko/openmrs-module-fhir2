@@ -10,6 +10,7 @@
 package org.openmrs.module.fhir2.api.translators.impl;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
@@ -18,6 +19,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.sameInstance;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
@@ -44,6 +46,7 @@ import org.openmrs.module.fhir2.api.FhirConceptService;
 import org.openmrs.module.fhir2.api.FhirConceptSourceService;
 import org.openmrs.module.fhir2.model.FhirConceptSource;
 import org.openmrs.util.LocaleUtility;
+import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 
 @RunWith(MockitoJUnitRunner.class)
 public class ConceptTranslatorImplTest {
@@ -109,13 +112,12 @@ public class ConceptTranslatorImplTest {
 		fhirLoinc.setConceptSource(loinc);
 		fhirLoinc.setUrl(FhirTestConstants.LOINC_SYSTEM_URL);
 		when(conceptSourceService.getConceptSourceByUrl(FhirTestConstants.LOINC_SYSTEM_URL)).thenReturn(Optional.of(loinc));
-		when(conceptSourceService.getUrlForConceptSource(loinc)).thenReturn(FhirTestConstants.LOINC_SYSTEM_URL);
 		
-		FhirConceptSource fhirCiel = new FhirConceptSource();
+		fhirCiel = new FhirConceptSource();
 		fhirCiel.setConceptSource(ciel);
 		fhirCiel.setUrl(FhirTestConstants.CIEL_SYSTEM_URN);
 		when(conceptSourceService.getConceptSourceByUrl(FhirTestConstants.CIEL_SYSTEM_URN)).thenReturn(Optional.of(ciel));
-		when(conceptSourceService.getUrlForConceptSource(ciel)).thenReturn(FhirTestConstants.CIEL_SYSTEM_URN);
+		when(conceptSourceService.getFhirConceptSources()).thenReturn(Arrays.asList(fhirLoinc, fhirCiel));
 	}
 	
 	@Test
@@ -134,9 +136,8 @@ public class ConceptTranslatorImplTest {
 		CodeableConcept result = conceptTranslator.toFhirResource(concept);
 		assertThat(result, notNullValue());
 		assertThat(result.getCoding(), not(empty()));
-		assertThat(result.getCoding(), hasItem(hasProperty("system", equalTo(FhirTestConstants.LOINC_SYSTEM_URL))));
-		assertThat(result.getCoding(), hasItem(hasProperty("code", equalTo("1000-1"))));
-		assertThat(result.getCoding(), hasItem(hasProperty("display", equalTo(CONCEPT_NAME))));
+		assertThat(result.getCoding(), hasItem(allOf(hasProperty("system", equalTo(FhirTestConstants.LOINC_SYSTEM_URL)),
+		    hasProperty("code", equalTo("1000-1")), hasProperty("display", nullValue()))));
 	}
 	
 	@Test
@@ -145,9 +146,8 @@ public class ConceptTranslatorImplTest {
 		CodeableConcept result = conceptTranslator.toFhirResource(concept);
 		assertThat(result, notNullValue());
 		assertThat(result.getCoding(), not(empty()));
-		assertThat(result.getCoding(), hasItem(hasProperty("system", equalTo(FhirTestConstants.CIEL_SYSTEM_URN))));
-		assertThat(result.getCoding(), hasItem(hasProperty("code", equalTo("1650"))));
-		assertThat(result.getCoding(), hasItem(hasProperty("display", equalTo(CONCEPT_NAME))));
+		assertThat(result.getCoding(), hasItem(allOf(hasProperty("system", equalTo(FhirTestConstants.CIEL_SYSTEM_URN)),
+		    hasProperty("code", equalTo("1650")), hasProperty("display", nullValue()))));
 	}
 	
 	@Test
@@ -420,6 +420,38 @@ public class ConceptTranslatorImplTest {
 	@Test
 	public void shouldReturnNullWhenCodeableConceptNull() {
 		assertThat(conceptTranslator.toOpenmrsType(null), nullValue());
+	}
+	
+	@Test
+	public void shouldReturnDifferentInstancesForSameConceptWhenCached() {
+		// given
+		conceptTranslator.setCacheManager(new ConcurrentMapCacheManager("fhir2ConceptToCodeableConcept"));
+		
+		// when
+		CodeableConcept result1 = conceptTranslator.toFhirResource(concept);
+		CodeableConcept result2 = conceptTranslator.toFhirResource(concept);
+		
+		// then
+		assertThat(result1, notNullValue());
+		assertThat(result2, notNullValue());
+		assertThat(result1.getText(), equalTo(result2.getText()));
+		assertThat(result1.getCoding().size(), equalTo(result2.getCoding().size()));
+		assertThat(result1, not(sameInstance(result2)));
+	}
+	
+	@Test
+	public void shouldNotShareMutationsBetweenCachedInstances() {
+		// given
+		conceptTranslator.setCacheManager(new ConcurrentMapCacheManager("fhir2ConceptToCodeableConcept"));
+		
+		// when
+		CodeableConcept result1 = conceptTranslator.toFhirResource(concept);
+		result1.setText("modified text");
+		CodeableConcept result2 = conceptTranslator.toFhirResource(concept);
+		
+		// then - the second result should have the original text, not the modified text
+		assertThat(result2.getText(), equalTo(CONCEPT_NAME));
+		assertThat(result2.getText(), not(equalTo("modified text")));
 	}
 	
 	private void addMapping(ConceptMapType mapType, ConceptSource conceptSource, String code) {

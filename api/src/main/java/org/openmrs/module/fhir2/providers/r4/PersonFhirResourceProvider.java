@@ -10,6 +10,7 @@
 package org.openmrs.module.fhir2.providers.r4;
 
 import static lombok.AccessLevel.PACKAGE;
+import static lombok.AccessLevel.PROTECTED;
 
 import javax.annotation.Nonnull;
 
@@ -21,20 +22,24 @@ import ca.uhn.fhir.rest.annotation.Delete;
 import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.IncludeParam;
 import ca.uhn.fhir.rest.annotation.OptionalParam;
+import ca.uhn.fhir.rest.annotation.Patch;
 import ca.uhn.fhir.rest.annotation.Read;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
 import ca.uhn.fhir.rest.annotation.Search;
 import ca.uhn.fhir.rest.annotation.Sort;
 import ca.uhn.fhir.rest.annotation.Update;
 import ca.uhn.fhir.rest.api.MethodOutcome;
+import ca.uhn.fhir.rest.api.PatchTypeEnum;
 import ca.uhn.fhir.rest.api.SortSpec;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
+import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.param.DateRangeParam;
 import ca.uhn.fhir.rest.param.StringAndListParam;
 import ca.uhn.fhir.rest.param.TokenAndListParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.collections.CollectionUtils;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -43,16 +48,17 @@ import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.Person;
 import org.openmrs.module.fhir2.api.FhirPersonService;
 import org.openmrs.module.fhir2.api.annotations.R4Provider;
+import org.openmrs.module.fhir2.api.search.param.PersonSearchParams;
 import org.openmrs.module.fhir2.providers.util.FhirProviderUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component("personFhirR4ResourceProvider")
 @R4Provider
-@Setter(PACKAGE)
 public class PersonFhirResourceProvider implements IResourceProvider {
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PACKAGE, onMethod_ = @Autowired)
 	private FhirPersonService fhirPersonService;
 	
 	@Override
@@ -87,6 +93,18 @@ public class PersonFhirResourceProvider implements IResourceProvider {
 		return FhirProviderUtils.buildUpdate(fhirPersonService.update(id.getIdPart(), person));
 	}
 	
+	@Patch
+	public MethodOutcome patchPerson(@IdParam IdType id, PatchTypeEnum patchType, @ResourceParam String body,
+	        RequestDetails requestDetails) {
+		if (id == null || id.getIdPart() == null) {
+			throw new InvalidRequestException("id must be specified to patch Person");
+		}
+		
+		Person person = fhirPersonService.patch(id.getIdPart(), patchType, body, requestDetails);
+		
+		return FhirProviderUtils.buildPatch(person);
+	}
+	
 	@Delete
 	@SuppressWarnings("unused")
 	public OperationOutcome deletePerson(@IdParam @Nonnull IdType id) {
@@ -110,8 +128,8 @@ public class PersonFhirResourceProvider implements IResourceProvider {
 			includes = null;
 		}
 		
-		return fhirPersonService.searchForPeople(name, gender, birthDate, city, state, postalCode, country, id, lastUpdated,
-		    sort, includes);
+		return fhirPersonService.searchForPeople(new PersonSearchParams(name, gender, birthDate, city, state, postalCode,
+		        country, id, lastUpdated, sort, includes));
 	}
 	
 }

@@ -9,18 +9,20 @@
  */
 package org.openmrs.module.fhir2.api.translators.impl;
 
+import static lombok.AccessLevel.PROTECTED;
 import static org.apache.commons.lang3.Validate.notNull;
+import static org.openmrs.module.fhir2.api.translators.impl.FhirTranslatorUtils.getLastUpdated;
+import static org.openmrs.module.fhir2.api.translators.impl.FhirTranslatorUtils.getVersionId;
 
 import javax.annotation.Nonnull;
 
 import java.util.Set;
 
-import lombok.AccessLevel;
+import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Group;
 import org.openmrs.Cohort;
-import org.openmrs.annotation.OpenmrsProfile;
 import org.openmrs.module.fhir2.api.translators.GroupMemberTranslator;
 import org.openmrs.module.fhir2.api.translators.GroupTranslator;
 import org.openmrs.module.fhir2.model.GroupMember;
@@ -29,11 +31,10 @@ import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-@Setter(AccessLevel.MODULE)
-@OpenmrsProfile(openmrsPlatformVersion = "2.0.* - 2.0.*")
 public class GroupTranslatorImpl extends BaseGroupTranslator implements GroupTranslator {
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private GroupMemberTranslator groupMemberTranslator;
 	
 	@Override
@@ -49,6 +50,9 @@ public class GroupTranslatorImpl extends BaseGroupTranslator implements GroupTra
 			groupMemberComponent.setEntity(groupMemberTranslator.toFhirResource(id).getEntity());
 			group.addMember(groupMemberComponent);
 		});
+		
+		group.getMeta().setLastUpdated(getLastUpdated(cohort));
+		group.getMeta().setVersionId(getVersionId(cohort));
 		
 		return group;
 	}

@@ -226,7 +226,7 @@ public class ObservationTranslatorImplTest {
 		List<Observation.ObservationReferenceRangeComponent> referenceRangeComponentList = new ArrayList<>();
 		referenceRangeComponentList.add(referenceRangeComponent);
 		
-		when(referenceRangeTranslator.toFhirResource(conceptNumeric)).thenReturn(referenceRangeComponentList);
+		when(referenceRangeTranslator.toFhirResource(observation)).thenReturn(referenceRangeComponentList);
 		
 		Observation result = observationTranslator.toFhirResource(observation);
 		
@@ -299,6 +299,16 @@ public class ObservationTranslatorImplTest {
 		
 		assertThat(result, notNullValue());
 		assertThat(result.getMeta().getLastUpdated(), DateMatchers.sameDay(new Date()));
+	}
+	
+	@Test
+	public void toFhirResource_shouldTranslateOpenMrsDateChangedToVersionId() {
+		Obs observation = new Obs();
+		observation.setDateChanged(new Date());
+		Observation result = observationTranslator.toFhirResource(observation);
+		
+		assertThat(result, notNullValue());
+		assertThat(result.getMeta().getVersionId(), notNullValue());
 	}
 	
 	@Test

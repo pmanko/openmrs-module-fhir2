@@ -18,16 +18,20 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.openmrs.module.fhir2.FhirConstants.OPENMRS_FHIR_EXT_MEDICATION_REQUEST_FULFILLER_STATUS;
 
 import java.lang.reflect.Field;
 import java.util.Date;
 
 import lombok.SneakyThrows;
+import org.exparity.hamcrest.date.DateMatchers;
 import org.hl7.fhir.r4.model.Annotation;
 import org.hl7.fhir.r4.model.BooleanType;
+import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Dosage;
+import org.hl7.fhir.r4.model.Extension;
 import org.hl7.fhir.r4.model.MedicationRequest;
 import org.hl7.fhir.r4.model.Quantity;
 import org.hl7.fhir.r4.model.Reference;
@@ -115,6 +119,8 @@ public class MedicationRequestTranslatorImplTest {
 	
 	private MedicationRequestTranslatorImpl medicationRequestTranslator;
 	
+	private MedicationRequestReferenceTranslatorImpl medicationRequestReferenceTranslator;
+	
 	private MedicationQuantityCodingTranslatorImpl quantityCodingTranslator;
 	
 	private MedicationRequest medicationRequest;
@@ -136,15 +142,18 @@ public class MedicationRequestTranslatorImplTest {
 		dispenseRequestComponentTranslator = new MedicationRequestDispenseRequestComponentTranslatorImpl();
 		dispenseRequestComponentTranslator.setQuantityCodingTranslator(quantityCodingTranslator);
 		
+		medicationRequestReferenceTranslator = new MedicationRequestReferenceTranslatorImpl();
+		
 		medicationRequestTranslator = new MedicationRequestTranslatorImpl();
 		medicationRequestTranslator.setStatusTranslator(medicationRequestStatusTranslator);
 		medicationRequestTranslator.setPractitionerReferenceTranslator(providerPractitionerReferenceTranslator);
 		medicationRequestTranslator.setMedicationRequestPriorityTranslator(medicationRequestPriorityTranslator);
 		medicationRequestTranslator.setMedicationReferenceTranslator(medicationReferenceTranslator);
-		medicationRequestTranslator.setConceptTranslator(conceptTranslator);
-		medicationRequestTranslator.setDosageTranslator(dosageTranslator);
+		medicationRequestTranslator.setMedicationRequestReferenceTranslator(medicationRequestReferenceTranslator);
 		medicationRequestTranslator.setEncounterReferenceTranslator(encounterReferenceTranslator);
 		medicationRequestTranslator.setPatientReferenceTranslator(patientReferenceTranslator);
+		medicationRequestTranslator.setConceptTranslator(conceptTranslator);
+		medicationRequestTranslator.setDosageTranslator(dosageTranslator);
 		medicationRequestTranslator.setOrderIdentifierTranslator(new OrderIdentifierTranslatorImpl());
 		medicationRequestTranslator
 		        .setMedicationRequestDispenseRequestComponentTranslator(dispenseRequestComponentTranslator);
@@ -211,7 +220,7 @@ public class MedicationRequestTranslatorImplTest {
 	}
 	
 	@Test
-	public void toFhirResource_shouldTranslateToFhirResourceWithBasedOnFieldGivenRenewOrder() {
+	public void toFhirResource_shouldTranslateToFhirResourceWithPriorPrescriptionGivenRenewOrder() {
 		discontinuedDrugOrder.setAction(Order.Action.RENEW);
 		
 		MedicationRequest result = medicationRequestTranslator.toFhirResource(discontinuedDrugOrder);
@@ -219,13 +228,34 @@ public class MedicationRequestTranslatorImplTest {
 		assertThat(result, notNullValue());
 		assertThat(result.getId(), notNullValue());
 		assertThat(result.getId(), equalTo(DISCONTINUED_DRUG_ORDER_UUID));
-		assertThat(result.getBasedOn().get(0).getReference(), equalTo(PRIOR_MEDICATION_REQUEST_REFERENCE));
-		assertThat(result.getBasedOn().get(0).getIdentifier().getValue(), equalTo(DRUG_ORDER_NUMBER));
+		assertThat(result.getPriorPrescription().getReference(), equalTo(PRIOR_MEDICATION_REQUEST_REFERENCE));
+		assertThat(result.getPriorPrescription().getIdentifier().getValue(), equalTo(DRUG_ORDER_NUMBER));
+	}
+	
+	@Test
+	public void toFhirResource_shouldTranslateToFhirResourceWithPriorPrescriptionGivenNewOrderWithPreviousOrder() {
+		discontinuedDrugOrder.setAction(Order.Action.NEW);
+		
+		MedicationRequest result = medicationRequestTranslator.toFhirResource(discontinuedDrugOrder);
+		
+		assertThat(result, notNullValue());
+		assertThat(result.getId(), notNullValue());
+		assertThat(result.getId(), equalTo(DISCONTINUED_DRUG_ORDER_UUID));
+		assertThat(result.getPriorPrescription().getReference(), equalTo(PRIOR_MEDICATION_REQUEST_REFERENCE));
+		assertThat(result.getPriorPrescription().getIdentifier().getValue(), equalTo(DRUG_ORDER_NUMBER));
 	}
 	
 	@Test(expected = NullPointerException.class)
 	public void toOpenMrsType_shouldThrowExceptionIfMedicationIsNull() {
 		medicationRequestTranslator.toOpenmrsType(new DrugOrder(), null);
+	}
+	
+	@Test
+	public void toFhirResource_shouldTranslateOrderNumberToIdentifier() {
+		MedicationRequest result = medicationRequestTranslator.toFhirResource(drugOrder);
+		
+		assertThat(result.getIdentifier(), not(empty()));
+		assertThat(result.getIdentifierFirstRep().getValue(), equalTo(DRUG_ORDER_NUMBER));
 	}
 	
 	@Test
@@ -641,12 +671,64 @@ public class MedicationRequestTranslatorImplTest {
 	}
 	
 	@Test
-	public void toOpenMrsType_shouldTranslateAuthoredOnToDateCreated() {
-		Date now = new Date();
-		medicationRequest.setAuthoredOn(now);
+	public void toFhirResource_shouldTranslateOpenMrsDateChangedToLastUpdated() {
+		drugOrder.setDateChanged(new Date());
 		
-		DrugOrder result = medicationRequestTranslator.toOpenmrsType(medicationRequest);
-		assertThat(result.getDateCreated(), equalTo(now));
+		org.hl7.fhir.r4.model.MedicationRequest medicationRequest = medicationRequestTranslator.toFhirResource(drugOrder);
+		assertThat(medicationRequest, notNullValue());
+		assertThat(medicationRequest.getMeta().getLastUpdated(), DateMatchers.sameDay(new Date()));
+	}
+	
+	@Test
+	public void toFhirResource_shouldTranslateOpenMrsDateChangedToVersionId() {
+		drugOrder.setDateChanged(new Date());
+		
+		org.hl7.fhir.r4.model.MedicationRequest medicationRequest = medicationRequestTranslator.toFhirResource(drugOrder);
+		assertThat(medicationRequest, notNullValue());
+		assertThat(medicationRequest.getMeta().getVersionId(), notNullValue());
+	}
+	
+	@Test
+	public void toFhirResource_shouldTranslateToFulfillerStatusExtenstion() {
+		DrugOrder drugOrder = new DrugOrder();
+		drugOrder.setFulfillerStatus(Order.FulfillerStatus.COMPLETED);
+		MedicationRequest medicationRequest = medicationRequestTranslator.toFhirResource(drugOrder);
+		assertThat(medicationRequest, notNullValue());
+		assertThat(
+		    medicationRequest.getExtensionByUrl(OPENMRS_FHIR_EXT_MEDICATION_REQUEST_FULFILLER_STATUS).getValue().toString(),
+		    equalTo("COMPLETED"));
+	}
+	
+	@Test
+	public void toOpenmrsType_shouldTranslateFulfillerStatusExtension() {
+		MedicationRequest medicationRequest = new MedicationRequest();
+		
+		Extension extension = new Extension();
+		extension.setUrl(OPENMRS_FHIR_EXT_MEDICATION_REQUEST_FULFILLER_STATUS);
+		extension.setValue(new CodeType("COMPLETED"));
+		
+		medicationRequest.addExtension(extension);
+		
+		DrugOrder drugOrder = medicationRequestTranslator.toOpenmrsType(medicationRequest);
+		assertThat(drugOrder, notNullValue());
+		assertThat(drugOrder.getFulfillerStatus(), equalTo(Order.FulfillerStatus.COMPLETED));
+		
+	}
+	
+	@Test
+	public void toOpenmrsType_shouldTranslateNullFulfillerStatusExtension() {
+		MedicationRequest medicationRequest = new MedicationRequest();
+		
+		Extension extension = new Extension();
+		extension.setUrl(OPENMRS_FHIR_EXT_MEDICATION_REQUEST_FULFILLER_STATUS);
+		extension.setValue(new CodeType(null));
+		
+		medicationRequest.addExtension(extension);
+		
+		DrugOrder drugOrder = medicationRequestTranslator.toOpenmrsType(medicationRequest);
+		assertThat(drugOrder, notNullValue());
+		assertThat(drugOrder.getFulfillerStatus(), equalTo(null));
+		
 	}
 	
 	@SneakyThrows

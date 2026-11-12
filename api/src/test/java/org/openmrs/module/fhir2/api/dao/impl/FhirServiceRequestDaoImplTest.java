@@ -20,20 +20,20 @@ import org.junit.Before;
 import org.junit.Test;
 import org.openmrs.OrderType;
 import org.openmrs.TestOrder;
-import org.openmrs.module.fhir2.TestFhirSpringConfiguration;
-import org.openmrs.test.BaseModuleContextSensitiveTest;
+import org.openmrs.module.fhir2.BaseFhirContextSensitiveTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.test.context.ContextConfiguration;
 
-@ContextConfiguration(classes = TestFhirSpringConfiguration.class, inheritLocations = false)
-public class FhirServiceRequestDaoImplTest extends BaseModuleContextSensitiveTest {
+public class FhirServiceRequestDaoImplTest extends BaseFhirContextSensitiveTest {
 	
 	private static final String TEST_ORDER_UUID = "7d96f25c-4949-4f72-9931-d808fbc226de";
 	
 	private static final String OTHER_ORDER_UUID = "02b9d1e4-7619-453e-bd6b-c32286f861df";
 	
 	private static final String WRONG_UUID = "7d96f25c-4949-4f72-9931-d808fbc226dd";
+	
+	// DrugOrder (order_id 1) from the standard test dataset
+	private static final String DRUG_ORDER_UUID = "921de0a3-05c4-444a-be03-e01b4c4b9142";
 	
 	private static final String TEST_ORDER_INITIAL_DATA = "org/openmrs/module/fhir2/api/dao/impl/FhirServiceRequestTest_initial_data.xml";
 	
@@ -71,5 +71,30 @@ public class FhirServiceRequestDaoImplTest extends BaseModuleContextSensitiveTes
 	public void shouldReturnNullIfUuidIsNotValidTestOrder() {
 		TestOrder result = dao.get(OTHER_ORDER_UUID);
 		assertThat(result, nullValue());
+	}
+	
+	@Test
+	public void exists_shouldReturnTrueForTestOrder() {
+		// given
+		String uuid = TEST_ORDER_UUID;
+		
+		// when
+		boolean result = dao.exists(uuid);
+		
+		// then
+		assertThat(result, equalTo(true));
+	}
+	
+	@Test
+	public void exists_shouldReturnFalseForDrugOrder() {
+		// given
+		// orders is a joined-subclass hierarchy, so the query must be restricted to test_order rows
+		String uuid = DRUG_ORDER_UUID;
+		
+		// when
+		boolean result = dao.exists(uuid);
+		
+		// then
+		assertThat(result, equalTo(false));
 	}
 }

@@ -38,17 +38,14 @@ import org.hl7.fhir.r4.model.MedicationRequest;
 import org.junit.Before;
 import org.junit.Test;
 import org.openmrs.Drug;
+import org.openmrs.module.fhir2.BaseFhirContextSensitiveTest;
 import org.openmrs.module.fhir2.FhirConstants;
-import org.openmrs.module.fhir2.TestFhirSpringConfiguration;
 import org.openmrs.module.fhir2.api.dao.FhirMedicationDao;
 import org.openmrs.module.fhir2.api.search.param.SearchParameterMap;
 import org.openmrs.module.fhir2.api.translators.MedicationTranslator;
-import org.openmrs.test.BaseModuleContextSensitiveTest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.ContextConfiguration;
 
-@ContextConfiguration(classes = TestFhirSpringConfiguration.class, inheritLocations = false)
-public class MedicationSearchQueryTest extends BaseModuleContextSensitiveTest {
+public class MedicationSearchQueryTest extends BaseFhirContextSensitiveTest {
 	
 	private static final String MEDICATION_INITIAL_DATA_XML = "org/openmrs/module/fhir2/api/dao/impl/FhirMedicationDaoImplTest_initial_data.xml";
 	
@@ -307,7 +304,7 @@ public class MedicationSearchQueryTest extends BaseModuleContextSensitiveTest {
 		
 		assertThat(resultList, not(empty()));
 		assertThat(resultList.size(), equalTo(5)); // reverse included resources added as part of the result list
-		assertThat(resultList.subList(1, 5),
+		assertThat(resultList.subList(1, resultList.size()),
 		    everyItem(allOf(is(instanceOf(MedicationRequest.class)), hasProperty("medicationReference",
 		        hasProperty("referenceElement", hasProperty("idPart", equalTo(MEDICATION_REVINCLUDE_UUID)))))));
 	}

@@ -10,6 +10,7 @@
 package org.openmrs.module.fhir2.providers.r3;
 
 import static lombok.AccessLevel.PACKAGE;
+import static lombok.AccessLevel.PROTECTED;
 
 import javax.annotation.Nonnull;
 
@@ -30,9 +31,10 @@ import ca.uhn.fhir.rest.param.TokenAndListParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.collections.CollectionUtils;
-import org.hl7.fhir.convertors.VersionConvertor_30_40;
+import org.hl7.fhir.convertors.factory.VersionConvertorFactory_30_40;
 import org.hl7.fhir.dstu3.model.Encounter;
 import org.hl7.fhir.dstu3.model.IdType;
 import org.hl7.fhir.dstu3.model.OperationOutcome;
@@ -50,10 +52,10 @@ import org.springframework.stereotype.Component;
 
 @Component("procedureRequestFhirR3ResourceProvider")
 @R3Provider
-@Setter(PACKAGE)
 public class ProcedureRequestFhirResourceProvider implements IResourceProvider {
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PACKAGE, onMethod_ = @Autowired)
 	private FhirServiceRequestService serviceRequestService;
 	
 	@Override
@@ -68,13 +70,12 @@ public class ProcedureRequestFhirResourceProvider implements IResourceProvider {
 		if (serviceRequest == null) {
 			throw new ResourceNotFoundException("Could not find serviceRequest with Id " + id.getIdPart());
 		}
-		return (ProcedureRequest) VersionConvertor_30_40.convertResource(serviceRequest, false);
+		return (ProcedureRequest) VersionConvertorFactory_30_40.convertResource(serviceRequest);
 	}
 	
 	public MethodOutcome createProcedureRequest(@ResourceParam ProcedureRequest procedureRequest) {
-		return FhirProviderUtils.buildCreate(VersionConvertor_30_40.convertResource(
-		    serviceRequestService.create((ServiceRequest) VersionConvertor_30_40.convertResource(procedureRequest, false)),
-		    false));
+		return FhirProviderUtils.buildCreate(VersionConvertorFactory_30_40.convertResource(
+		    serviceRequestService.create((ServiceRequest) VersionConvertorFactory_30_40.convertResource(procedureRequest))));
 	}
 	
 	public MethodOutcome updateProcedureRequest(@IdParam IdType id, @ResourceParam ProcedureRequest procedureRequest) {
@@ -84,9 +85,8 @@ public class ProcedureRequestFhirResourceProvider implements IResourceProvider {
 		
 		procedureRequest.setId(id.getIdPart());
 		
-		return FhirProviderUtils
-		        .buildUpdate(VersionConvertor_30_40.convertResource(serviceRequestService.update(id.getIdPart(),
-		            (ServiceRequest) VersionConvertor_30_40.convertResource(procedureRequest, false)), false));
+		return FhirProviderUtils.buildUpdate(VersionConvertorFactory_30_40.convertResource(serviceRequestService
+		        .update(id.getIdPart(), (ServiceRequest) VersionConvertorFactory_30_40.convertResource(procedureRequest))));
 	}
 	
 	public OperationOutcome deleteProcedureRequest(@IdParam @Nonnull IdType id) {
@@ -111,6 +111,7 @@ public class ProcedureRequestFhirResourceProvider implements IResourceProvider {
 	        @OptionalParam(name = ProcedureRequest.SP_OCCURRENCE) DateRangeParam occurrence,
 	        @OptionalParam(name = ProcedureRequest.SP_RES_ID) TokenAndListParam uuid,
 	        @OptionalParam(name = "_lastUpdated") DateRangeParam lastUpdated,
+	        // Encounter:part-of is only allowed on the R4 ServiceRequest search; it is untested against STU3
 	        @IncludeParam(allow = { "ProcedureRequest:" + ProcedureRequest.SP_PATIENT,
 	                "ProcedureRequest:" + ProcedureRequest.SP_REQUESTER,
 	                "ProcedureRequest:" + ProcedureRequest.SP_ENCOUNTER }) HashSet<Include> includes) {

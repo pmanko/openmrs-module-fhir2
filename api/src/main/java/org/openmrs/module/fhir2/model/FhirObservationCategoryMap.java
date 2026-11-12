@@ -23,12 +23,19 @@ import java.util.UUID;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import org.hibernate.search.annotations.Field;
 import org.openmrs.Auditable;
 import org.openmrs.ConceptClass;
 import org.openmrs.Retireable;
 import org.openmrs.User;
 
+/**
+ * This class provides a means of mapping between FHIR's concept of a observation category and
+ * OpenMRS's concept class. <br/>
+ * FHIR's observation category property provides a way of communicating information of the type of
+ * result an observation represents, e.g., whether it's a laboratory result, a radiology result,
+ * etc. OpenMRS does not directly store this information about observations, but we do have a
+ * concept class which can be an imperfect mapping for this.
+ */
 @Data
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 @Entity
@@ -63,7 +70,6 @@ public class FhirObservationCategoryMap implements Auditable, Retireable {
 	private Date dateChanged;
 	
 	@Column(name = "retired", nullable = false)
-	@Field
 	private Boolean retired = Boolean.FALSE;
 	
 	@Column(name = "date_retired")

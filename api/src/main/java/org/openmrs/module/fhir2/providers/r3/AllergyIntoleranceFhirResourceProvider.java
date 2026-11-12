@@ -10,6 +10,7 @@
 package org.openmrs.module.fhir2.providers.r3;
 
 import static lombok.AccessLevel.PACKAGE;
+import static lombok.AccessLevel.PROTECTED;
 
 import javax.annotation.Nonnull;
 
@@ -35,9 +36,10 @@ import ca.uhn.fhir.rest.param.TokenAndListParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.collections.CollectionUtils;
-import org.hl7.fhir.convertors.conv30_40.AllergyIntolerance30_40;
+import org.hl7.fhir.convertors.factory.VersionConvertorFactory_30_40;
 import org.hl7.fhir.dstu3.model.AllergyIntolerance;
 import org.hl7.fhir.dstu3.model.IdType;
 import org.hl7.fhir.dstu3.model.OperationOutcome;
@@ -47,22 +49,23 @@ import org.hl7.fhir.r4.model.Observation;
 import org.openmrs.module.fhir2.api.FhirAllergyIntoleranceService;
 import org.openmrs.module.fhir2.api.annotations.R3Provider;
 import org.openmrs.module.fhir2.api.search.SearchQueryBundleProviderR3Wrapper;
+import org.openmrs.module.fhir2.api.search.param.FhirAllergyIntoleranceSearchParams;
 import org.openmrs.module.fhir2.providers.util.FhirProviderUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component("allergyIntoleranceFhirR3ResourceProvider")
 @R3Provider
-@Setter(PACKAGE)
 public class AllergyIntoleranceFhirResourceProvider implements IResourceProvider {
+	
+	@Getter(PROTECTED)
+	@Setter(value = PACKAGE, onMethod_ = @Autowired)
+	private FhirAllergyIntoleranceService allergyIntoleranceService;
 	
 	@Override
 	public Class<? extends IBaseResource> getResourceType() {
 		return AllergyIntolerance.class;
 	}
-	
-	@Autowired
-	private FhirAllergyIntoleranceService allergyIntoleranceService;
 	
 	@Read
 	@SuppressWarnings("unused")
@@ -72,14 +75,14 @@ public class AllergyIntoleranceFhirResourceProvider implements IResourceProvider
 			throw new ResourceNotFoundException("Could not find allergyIntolerance with Id " + id.getIdPart());
 		}
 		
-		return AllergyIntolerance30_40.convertAllergyIntolerance(allergyIntolerance);
+		return (AllergyIntolerance) VersionConvertorFactory_30_40.convertResource(allergyIntolerance);
 	}
 	
 	@Create
 	@SuppressWarnings("unused")
 	public MethodOutcome creatAllergyIntolerance(@ResourceParam AllergyIntolerance allergyIntolerance) {
-		return FhirProviderUtils.buildCreate(AllergyIntolerance30_40.convertAllergyIntolerance(
-		    allergyIntoleranceService.create(AllergyIntolerance30_40.convertAllergyIntolerance(allergyIntolerance))));
+		return FhirProviderUtils.buildCreate(VersionConvertorFactory_30_40.convertResource(allergyIntoleranceService.create(
+		    (org.hl7.fhir.r4.model.AllergyIntolerance) VersionConvertorFactory_30_40.convertResource(allergyIntolerance))));
 	}
 	
 	@Update
@@ -91,8 +94,9 @@ public class AllergyIntoleranceFhirResourceProvider implements IResourceProvider
 		
 		allergyIntolerance.setId(id.getIdPart());
 		
-		return FhirProviderUtils.buildUpdate(AllergyIntolerance30_40.convertAllergyIntolerance(allergyIntoleranceService
-		        .update(id.getIdPart(), AllergyIntolerance30_40.convertAllergyIntolerance(allergyIntolerance))));
+		return FhirProviderUtils.buildUpdate(VersionConvertorFactory_30_40.convertResource(allergyIntoleranceService.update(
+		    id.getIdPart(),
+		    (org.hl7.fhir.r4.model.AllergyIntolerance) VersionConvertorFactory_30_40.convertResource(allergyIntolerance))));
 	}
 	
 	@Delete
@@ -127,7 +131,8 @@ public class AllergyIntoleranceFhirResourceProvider implements IResourceProvider
 			includes = null;
 		}
 		
-		return new SearchQueryBundleProviderR3Wrapper(allergyIntoleranceService.searchForAllergies(patientReference,
-		    category, allergen, severity, manifestationCode, clinicalStatus, id, lastUpdated, sort, includes));
+		return new SearchQueryBundleProviderR3Wrapper(
+		        allergyIntoleranceService.searchForAllergies(new FhirAllergyIntoleranceSearchParams(patientReference,
+		                category, allergen, severity, manifestationCode, clinicalStatus, id, lastUpdated, sort, includes)));
 	}
 }

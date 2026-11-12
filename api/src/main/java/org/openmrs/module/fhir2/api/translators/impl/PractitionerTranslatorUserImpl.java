@@ -9,11 +9,14 @@
  */
 package org.openmrs.module.fhir2.api.translators.impl;
 
+import static lombok.AccessLevel.PROTECTED;
 import static org.apache.commons.lang3.Validate.notNull;
+import static org.openmrs.module.fhir2.api.translators.impl.FhirTranslatorUtils.getLastUpdated;
+import static org.openmrs.module.fhir2.api.translators.impl.FhirTranslatorUtils.getVersionId;
 
 import javax.annotation.Nonnull;
 
-import lombok.AccessLevel;
+import lombok.Getter;
 import lombok.Setter;
 import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.Practitioner;
@@ -31,19 +34,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
-@Setter(AccessLevel.PACKAGE)
 public class PractitionerTranslatorUserImpl implements PractitionerTranslator<User> {
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private PersonNameTranslator nameTranslator;
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private GenderTranslator genderTranslator;
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private BirthDateTranslator birthDateTranslator;
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private PersonAddressTranslator addressTranslator;
 	
 	@Override
@@ -70,7 +76,8 @@ public class PractitionerTranslatorUserImpl implements PractitionerTranslator<Us
 				practitioner.addAddress(addressTranslator.toFhirResource(address));
 			}
 		}
-		practitioner.getMeta().setLastUpdated(user.getDateChanged());
+		practitioner.getMeta().setLastUpdated(getLastUpdated(user));
+		practitioner.getMeta().setVersionId(getVersionId(user));
 		
 		return practitioner;
 	}
@@ -85,7 +92,10 @@ public class PractitionerTranslatorUserImpl implements PractitionerTranslator<Us
 			return null;
 		}
 		
-		user.setUuid(practitioner.getId());
+		if (practitioner.hasId()) {
+			user.setUuid(practitioner.getIdElement().getIdPart());
+		}
+		
 		setSystemId(practitioner, user);
 		
 		if (practitioner.hasBirthDateElement()) {

@@ -64,24 +64,23 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.instance.model.api.IIdType;
 import org.hl7.fhir.r4.model.DiagnosticReport;
 import org.hl7.fhir.r4.model.Encounter;
+import org.hl7.fhir.r4.model.Location;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Patient;
 import org.junit.Before;
 import org.junit.Test;
 import org.openmrs.Obs;
+import org.openmrs.module.fhir2.BaseFhirContextSensitiveTest;
 import org.openmrs.module.fhir2.FhirConstants;
 import org.openmrs.module.fhir2.FhirTestConstants;
-import org.openmrs.module.fhir2.TestFhirSpringConfiguration;
 import org.openmrs.module.fhir2.api.dao.FhirEncounterDao;
 import org.openmrs.module.fhir2.api.dao.FhirObservationDao;
+import org.openmrs.module.fhir2.api.search.param.ObservationSearchParams;
 import org.openmrs.module.fhir2.api.search.param.SearchParameterMap;
 import org.openmrs.module.fhir2.api.translators.ObservationTranslator;
-import org.openmrs.test.BaseModuleContextSensitiveTest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.ContextConfiguration;
 
-@ContextConfiguration(classes = TestFhirSpringConfiguration.class, inheritLocations = false)
-public class ObservationSearchQueryTest extends BaseModuleContextSensitiveTest {
+public class ObservationSearchQueryTest extends BaseFhirContextSensitiveTest {
 	
 	private static final String OBS_DATA_XML = "org/openmrs/module/fhir2/api/dao/impl/FhirObservationDaoImplTest_initial_data_suppl.xml";
 	
@@ -184,7 +183,7 @@ public class ObservationSearchQueryTest extends BaseModuleContextSensitiveTest {
 		IBundleProvider results = search(theParams);
 		
 		assertThat(results, notNullValue());
-		assertThat(results.size(), equalTo(3));
+		assertThat(results.size(), equalTo(4));
 		
 		List<IBaseResource> resultList = get(results);
 		
@@ -204,7 +203,7 @@ public class ObservationSearchQueryTest extends BaseModuleContextSensitiveTest {
 		IBundleProvider results = search(theParams);
 		
 		assertThat(results, notNullValue());
-		assertThat(results.size(), equalTo(3));
+		assertThat(results.size(), equalTo(4));
 		
 		List<IBaseResource> resultList = get(results);
 		
@@ -226,7 +225,7 @@ public class ObservationSearchQueryTest extends BaseModuleContextSensitiveTest {
 		IBundleProvider results = search(theParams);
 		
 		assertThat(results, notNullValue());
-		assertThat(results.size(), equalTo(3));
+		assertThat(results.size(), equalTo(4));
 		
 		List<IBaseResource> resultList = get(results);
 		
@@ -253,7 +252,7 @@ public class ObservationSearchQueryTest extends BaseModuleContextSensitiveTest {
 		IBundleProvider results = search(theParams);
 		
 		assertThat(results, notNullValue());
-		assertThat(results.size(), equalTo(15));
+		assertThat(results.size(), equalTo(16));
 		
 		List<IBaseResource> resultList = get(results);
 		
@@ -690,15 +689,13 @@ public class ObservationSearchQueryTest extends BaseModuleContextSensitiveTest {
 	
 	@Test
 	public void searchForObs_shouldReturnObsByCategory() {
-		TokenAndListParam categories = new TokenAndListParam().addAnd(new TokenParam().setValue("laboratory"));
+		ObservationSearchParams theParams = new ObservationSearchParams();
+		theParams.setCategory(new TokenAndListParam().addAnd(new TokenParam().setValue("laboratory")));
 		
-		SearchParameterMap theParams = new SearchParameterMap();
-		theParams.addParameter(FhirConstants.CATEGORY_SEARCH_HANDLER, categories);
-		
-		IBundleProvider results = search(theParams);
+		IBundleProvider results = search(theParams.toSearchParameterMap());
 		
 		assertThat(results, notNullValue());
-		assertThat(results.size(), equalTo(17));
+		assertThat(results.size(), equalTo(18));
 		
 		List<IBaseResource> resultList = get(results);
 		
@@ -1081,7 +1078,7 @@ public class ObservationSearchQueryTest extends BaseModuleContextSensitiveTest {
 		IBundleProvider results = search(theParams);
 		
 		assertThat(results, notNullValue());
-		assertThat(results.size(), equalTo(16));
+		assertThat(results.size(), equalTo(17));
 		
 		List<IBaseResource> resultList = get(results);
 		
@@ -1100,7 +1097,7 @@ public class ObservationSearchQueryTest extends BaseModuleContextSensitiveTest {
 		IBundleProvider results = search(theParams);
 		
 		assertThat(results, notNullValue());
-		assertThat(results.size(), equalTo(11));
+		assertThat(results.size(), equalTo(12));
 		
 		List<IBaseResource> resultList = get(results);
 		
@@ -1119,7 +1116,7 @@ public class ObservationSearchQueryTest extends BaseModuleContextSensitiveTest {
 		IBundleProvider results = search(theParams);
 		
 		assertThat(results, notNullValue());
-		assertThat(results.size(), equalTo(10));
+		assertThat(results.size(), equalTo(11));
 		
 		List<IBaseResource> resultList = get(results);
 		
@@ -1315,6 +1312,34 @@ public class ObservationSearchQueryTest extends BaseModuleContextSensitiveTest {
 		Observation returnedObservation = (Observation) resultList.iterator().next();
 		assertThat(resultList, hasItem(allOf(is(instanceOf(Encounter.class)),
 		    hasProperty("id", equalTo(returnedObservation.getEncounter().getReferenceElement().getIdPart())))));
+	}
+	
+	@Test
+	public void searchForObs_shouldAddEncounterLocationToReturnedResultsWhenEncounterLocationIsIterated() {
+		// GET /Observation?_id={OBS_UUID}&_include=Observation:encounter&_include:iterate=Encounter:location
+		// (the Observation search doesn't allow Encounter:location, so over REST this is rejected; this tests the include
+		// handling directly, as a chain across resource types)
+		TokenAndListParam uuid = new TokenAndListParam().addAnd(new TokenParam(OBS_UUID));
+		HashSet<Include> includes = new HashSet<>();
+		includes.add(new Include("Observation:encounter"));
+		includes.add(new Include("Encounter:location", true));
+		
+		SearchParameterMap theParams = new SearchParameterMap()
+		        .addParameter(FhirConstants.COMMON_SEARCH_HANDLER, FhirConstants.ID_PROPERTY, uuid)
+		        .addParameter(FhirConstants.INCLUDE_SEARCH_HANDLER, includes);
+		
+		IBundleProvider results = search(theParams);
+		assertThat(results.size(), equalTo(1));
+		
+		List<IBaseResource> resultList = get(results);
+		
+		assertThat(resultList.size(), equalTo(3)); // the Observation, its Encounter and that Encounter's Location
+		
+		Encounter encounter = resultList.stream().filter(it -> it instanceof Encounter).map(it -> (Encounter) it).findFirst()
+		        .orElse(null);
+		assertThat(encounter, notNullValue());
+		assertThat(resultList, hasItem(allOf(is(instanceOf(Location.class)),
+		    hasProperty("id", equalTo(encounter.getLocationFirstRep().getLocation().getReferenceElement().getIdPart())))));
 	}
 	
 	@Test
@@ -1533,7 +1558,7 @@ public class ObservationSearchQueryTest extends BaseModuleContextSensitiveTest {
 		IBundleProvider results = search(theParams);
 		
 		assertThat(results, notNullValue());
-		List<IBaseResource> resultList = get(results);
+		List<IBaseResource> resultList = results.getAllResources();
 		
 		assertThat(resultList.size(), equalTo(2));
 		assertThat(resultList, everyItem(anyOf(allOf(is(instanceOf(Observation.class))))));
@@ -1556,7 +1581,7 @@ public class ObservationSearchQueryTest extends BaseModuleContextSensitiveTest {
 		IBundleProvider results = search(theParams);
 		
 		assertThat(results, notNullValue());
-		List<IBaseResource> resultList = get(results);
+		List<IBaseResource> resultList = results.getAllResources();
 		
 		assertThat(resultList.size(), equalTo(2));
 		assertThat(resultList, everyItem(anyOf(allOf(is(instanceOf(Observation.class))))));
@@ -1584,7 +1609,7 @@ public class ObservationSearchQueryTest extends BaseModuleContextSensitiveTest {
 		IBundleProvider results = search(theParams);
 		
 		assertThat(results, notNullValue());
-		List<IBaseResource> resultList = get(results);
+		List<IBaseResource> resultList = results.getAllResources();
 		
 		assertThat(resultList.size(), equalTo(2));
 		assertThat(resultList, everyItem(anyOf(allOf(is(instanceOf(Observation.class))))));
@@ -1611,9 +1636,10 @@ public class ObservationSearchQueryTest extends BaseModuleContextSensitiveTest {
 		IBundleProvider results = search(theParams);
 		
 		assertThat(results, notNullValue());
-		List<IBaseResource> resultList = get(results);
+		List<IBaseResource> resultList = results.getAllResources();
 		
-		assertThat(resultList.size(), equalTo(10));
+		assertThat(results.size(), equalTo(16));
+		assertThat(resultList.size(), equalTo(16));
 		assertThat(resultList, everyItem(anyOf(allOf(is(instanceOf(Observation.class))))));
 		assertThat(resultList, isSortedAndWithinMax(2));
 	}
@@ -1642,7 +1668,7 @@ public class ObservationSearchQueryTest extends BaseModuleContextSensitiveTest {
 		IBundleProvider results = search(theParams);
 		
 		assertThat(results, notNullValue());
-		List<IBaseResource> resultList = get(results);
+		List<IBaseResource> resultList = results.getAllResources();
 		
 		assertThat(resultList.size(), equalTo(2));
 		assertThat(resultList, everyItem(anyOf(allOf(is(instanceOf(Observation.class))))));

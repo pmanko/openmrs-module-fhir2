@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    This Source Code Form is subject to the terms of the Mozilla Public License,
+    v. 2.0. If a copy of the MPL was not distributed with this file, You can
+    obtain one at http://mozilla.org/MPL/2.0/. OpenMRS is also distributed under
+    the terms of the Healthcare Disclaimer located at http://openmrs.org/license.
+
+    Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
+    graphic logo is a trademark of OpenMRS Inc.
+-->
+<Immunization xmlns="http://hl7.org/fhir">
+    <status value="completed"/>
+    <vaccineCode>
+        <coding>
+            <code value="15f83cd6-64e9-4e06-a5f9-364d3b14a43d"/>
+            <display value="COVAX"/>
+        </coding>
+    </vaccineCode>
+    <patient>
+        <reference value="Patient/8d703ff2-c3e2-4070-9737-73e713d5a50d"/>
+    </patient>
+    <encounter>
+        <reference value="Encounter/814fd8dc-e0be-416b-a7b5-4bac0a4b3297"/>
+    </encounter>
+    <occurrenceDateTime value="2020-07-08T18:30:00.000Z"/>
+    <manufacturer>
+        <display value="ACME"/>
+    </manufacturer>
+    <lotNumber value="FOO1234"/>
+    <expirationDate value="2022-07-31"/>
+    <performer>
+        <actor>
+            <reference value="Practitioner/f9badd80-ab76-11e2-9e96-0800200c9a66"/>
+            <type value="Practitioner"/>
+        </actor>
+    </performer>
+    <protocolApplied>
+        <doseNumberPositiveInt value="2"/>
+        <series value="COVAX"/>
+    </protocolApplied>
+</Immunization>

@@ -28,6 +28,7 @@ import static org.openmrs.module.fhir2.FhirConstants.NAME_SEARCH_HANDLER;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import ca.uhn.fhir.model.api.Include;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
@@ -46,17 +47,14 @@ import org.hl7.fhir.r4.model.ServiceRequest;
 import org.junit.Before;
 import org.junit.Test;
 import org.openmrs.Provider;
+import org.openmrs.module.fhir2.BaseFhirContextSensitiveTest;
 import org.openmrs.module.fhir2.FhirConstants;
-import org.openmrs.module.fhir2.TestFhirSpringConfiguration;
 import org.openmrs.module.fhir2.api.dao.FhirPractitionerDao;
 import org.openmrs.module.fhir2.api.search.param.SearchParameterMap;
 import org.openmrs.module.fhir2.api.translators.PractitionerTranslator;
-import org.openmrs.test.BaseModuleContextSensitiveTest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.ContextConfiguration;
 
-@ContextConfiguration(classes = TestFhirSpringConfiguration.class, inheritLocations = false)
-public class PractitionerSearchQueryTest extends BaseModuleContextSensitiveTest {
+public class PractitionerSearchQueryTest extends BaseFhirContextSensitiveTest {
 	
 	private static final String PRACTITIONER_INITIAL_DATA_XML = "org/openmrs/module/fhir2/api/dao/impl/FhirPractitionerDaoImplTest_initial_data.xml";
 	
@@ -577,10 +575,14 @@ public class PractitionerSearchQueryTest extends BaseModuleContextSensitiveTest 
 		
 		assertThat(results, notNullValue());
 		assertThat(resultList, not(empty()));
-		assertThat(resultList, hasSize(equalTo(5))); // included resources added as part of result list
-		assertThat(resultList.subList(1, 5),
-		    everyItem(allOf(is(instanceOf(Encounter.class)), hasProperty("participantFirstRep", hasProperty("individual",
-		        hasProperty("referenceElement", hasProperty("idPart", equalTo(PRACTITIONER_UUID))))))));
+		assertThat(resultList, hasSize(equalTo(6))); // included resources added as part of result list
+		// Visits are surfaced as FHIR Encounters but have no direct participant; only check the encounter-tagged ones
+		assertThat(
+		    resultList.stream().filter(Encounter.class::isInstance).map(Encounter.class::cast)
+		            .filter(e -> e.getMeta().getTag(FhirConstants.OPENMRS_FHIR_EXT_ENCOUNTER_TAG, "encounter") != null)
+		            .collect(Collectors.toList()),
+		    everyItem(hasProperty("participantFirstRep", hasProperty("individual",
+		        hasProperty("referenceElement", hasProperty("idPart", equalTo(PRACTITIONER_UUID)))))));
 	}
 	
 	@Test
@@ -600,7 +602,7 @@ public class PractitionerSearchQueryTest extends BaseModuleContextSensitiveTest 
 		assertThat(results, notNullValue());
 		assertThat(resultList, not(empty()));
 		assertThat(resultList, hasSize(equalTo(9))); // included resources added as part of result list
-		assertThat(resultList.subList(1, 9), everyItem(allOf(is(instanceOf(MedicationRequest.class)),
+		assertThat(resultList.subList(1, resultList.size()), everyItem(allOf(is(instanceOf(MedicationRequest.class)),
 		    hasProperty("requester", hasProperty("referenceElement", hasProperty("idPart", equalTo(PRACTITIONER_UUID)))))));
 	}
 	
@@ -663,9 +665,13 @@ public class PractitionerSearchQueryTest extends BaseModuleContextSensitiveTest 
 		
 		assertThat(results, notNullValue());
 		assertThat(resultList, not(empty()));
-		assertThat(resultList, hasSize(equalTo(8))); // included resources (4 encounters + 3 service requests) added as part of result list
-		assertThat(resultList.subList(1, 8),
-		    everyItem(anyOf(
+		assertThat(resultList, hasSize(equalTo(9))); // included resources (5 encounters + 3 service requests) added as part of result list
+		// Visits are surfaced as FHIR Encounters but have no direct participant; exclude them from the strict check
+		assertThat(
+		    resultList.stream().filter(r -> !(r instanceof Encounter)
+		            || ((Encounter) r).getMeta().getTag(FhirConstants.OPENMRS_FHIR_EXT_ENCOUNTER_TAG, "visit") == null)
+		            .collect(Collectors.toList()),
+		    everyItem(anyOf(is(instanceOf(Practitioner.class)),
 		        allOf(is(instanceOf(Encounter.class)),
 		            hasProperty("participantFirstRep",
 		                hasProperty("individual",

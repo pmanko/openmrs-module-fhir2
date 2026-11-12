@@ -21,14 +21,17 @@ import ca.uhn.fhir.rest.annotation.Delete;
 import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.IncludeParam;
 import ca.uhn.fhir.rest.annotation.OptionalParam;
+import ca.uhn.fhir.rest.annotation.Patch;
 import ca.uhn.fhir.rest.annotation.Read;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
 import ca.uhn.fhir.rest.annotation.Search;
 import ca.uhn.fhir.rest.annotation.Sort;
 import ca.uhn.fhir.rest.annotation.Update;
 import ca.uhn.fhir.rest.api.MethodOutcome;
+import ca.uhn.fhir.rest.api.PatchTypeEnum;
 import ca.uhn.fhir.rest.api.SortSpec;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
+import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.param.DateRangeParam;
 import ca.uhn.fhir.rest.param.ReferenceAndListParam;
 import ca.uhn.fhir.rest.param.TokenAndListParam;
@@ -53,10 +56,9 @@ import org.springframework.stereotype.Component;
 
 @Component("medicationDispenseFhirR4ResourceProvider")
 @R4Provider
-@Setter(PACKAGE)
 public class MedicationDispenseFhirResourceProvider implements IResourceProvider {
 	
-	@Autowired
+	@Setter(value = PACKAGE, onMethod_ = @Autowired)
 	private FhirMedicationDispenseService fhirMedicationDispenseService;
 	
 	@Override
@@ -65,7 +67,6 @@ public class MedicationDispenseFhirResourceProvider implements IResourceProvider
 	}
 	
 	@Read
-	@SuppressWarnings("unused")
 	public MedicationDispense getMedicationDispenseByUuid(@IdParam @Nonnull IdType id) {
 		MedicationDispense medicationDispense = fhirMedicationDispenseService.get(id.getIdPart());
 		if (medicationDispense == null) {
@@ -90,6 +91,19 @@ public class MedicationDispenseFhirResourceProvider implements IResourceProvider
 		return FhirProviderUtils.buildUpdate(medicationDispense);
 	}
 	
+	@Patch
+	public MethodOutcome patchMedicationDispense(@IdParam IdType id, PatchTypeEnum patchType, @ResourceParam String body,
+	        RequestDetails requestDetails) {
+		if (id == null || id.getIdPart() == null) {
+			throw new InvalidRequestException("id must be specified to update MedicationDispense resource");
+		}
+		
+		MedicationDispense medicationDispense = fhirMedicationDispenseService.patch(id.getIdPart(), patchType, body,
+		    requestDetails);
+		
+		return FhirProviderUtils.buildPatch(medicationDispense);
+	}
+	
 	@Delete
 	public OperationOutcome deleteMedicationDispense(@IdParam IdType id) {
 		fhirMedicationDispenseService.delete(id.getIdPart());
@@ -97,7 +111,6 @@ public class MedicationDispenseFhirResourceProvider implements IResourceProvider
 	}
 	
 	@Search
-	@SuppressWarnings("unused")
 	public IBundleProvider searchForMedicationDispenses(
 	        @OptionalParam(name = MedicationDispense.SP_RES_ID) TokenAndListParam id,
 	        @OptionalParam(name = MedicationDispense.SP_PATIENT, chainWhitelist = { "", Patient.SP_IDENTIFIER,

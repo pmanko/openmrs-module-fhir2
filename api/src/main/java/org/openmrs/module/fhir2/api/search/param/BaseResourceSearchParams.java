@@ -10,7 +10,7 @@
 package org.openmrs.module.fhir2.api.search.param;
 
 import java.io.Serializable;
-import java.util.HashSet;
+import java.util.Set;
 
 import ca.uhn.fhir.model.api.Include;
 import ca.uhn.fhir.rest.api.SortSpec;
@@ -23,7 +23,8 @@ import org.openmrs.module.fhir2.FhirConstants;
 
 /**
  * Class containing shared search (and search result) parameters that apply to all resources See
- * https://www.hl7.org/fhir/search.html#Summary for a comprehensive description of these parameters
+ * <a href="https://www.hl7.org/fhir/search.html#Summary">The HL7 Search API</a> for a comprehensive
+ * description of these parameters
  */
 @Data
 @NoArgsConstructor
@@ -36,15 +37,16 @@ public abstract class BaseResourceSearchParams implements Serializable {
 	
 	protected SortSpec sort;
 	
-	protected HashSet<Include> includes;
+	protected Set<Include> includes;
 	
-	protected HashSet<Include> revIncludes;
+	protected Set<Include> revIncludes;
 	
 	protected final SearchParameterMap baseSearchParameterMap() {
 		return new SearchParameterMap().addParameter(FhirConstants.COMMON_SEARCH_HANDLER, FhirConstants.ID_PROPERTY, getId())
 		        .addParameter(FhirConstants.COMMON_SEARCH_HANDLER, FhirConstants.LAST_UPDATED_PROPERTY, getLastUpdated())
 		        .addParameter(FhirConstants.INCLUDE_SEARCH_HANDLER, getIncludes())
-		        .addParameter(FhirConstants.REVERSE_INCLUDE_SEARCH_HANDLER, getRevIncludes()).setSortSpec(getSort());
+		        .addParameter(FhirConstants.REVERSE_INCLUDE_SEARCH_HANDLER, getRevIncludes()).setSortSpec(getSort())
+		        .addParameter(FhirConstants.EXACT_TOTAL_SEARCH_PARAMETER, Boolean.FALSE);
 	}
 	
 	public abstract SearchParameterMap toSearchParameterMap();

@@ -9,6 +9,10 @@
  */
 package org.openmrs.module.fhir2.api.translators.impl;
 
+import static lombok.AccessLevel.PROTECTED;
+import static org.openmrs.module.fhir2.api.translators.impl.FhirTranslatorUtils.getLastUpdated;
+import static org.openmrs.module.fhir2.api.translators.impl.FhirTranslatorUtils.getVersionId;
+
 import javax.annotation.Nonnull;
 
 import java.util.ArrayList;
@@ -16,7 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-import lombok.AccessLevel;
+import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Enumerations;
@@ -36,13 +40,14 @@ import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-@Setter(AccessLevel.PACKAGE)
 public class ValueSetTranslatorImpl implements ValueSetTranslator {
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private FhirConceptSourceService conceptSourceService;
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private ValueSetReferenceTranslator valueSetReferenceTranslator;
 	
 	@Override
@@ -73,7 +78,7 @@ public class ValueSetTranslatorImpl implements ValueSetTranslator {
 		
 		ValueSet.ValueSetComposeComponent compose = new ValueSet.ValueSetComposeComponent();
 		
-		Map<String, ValueSet.ConceptSetComponent> sets = new HashMap<String, ValueSet.ConceptSetComponent>();
+		Map<String, ValueSet.ConceptSetComponent> sets = new HashMap<>();
 		ValueSet.ConceptSetComponent conceptUuidSet = new ValueSet.ConceptSetComponent();
 		sets.put("conceptUuid", conceptUuidSet);
 		
@@ -85,7 +90,6 @@ public class ValueSetTranslatorImpl implements ValueSetTranslator {
 			if (conceptSetMember != null) {
 				// if it's a set, just add a reference to the concept uuid set
 				if (conceptSetMember.getSet()) {
-					;
 					conceptUuidSet.addValueSet(valueSetReferenceTranslator.toFhirResource(conceptSetMember).getReference());
 				} else {
 					// first, add the uuid and display to the concept uuid set
@@ -123,8 +127,11 @@ public class ValueSetTranslatorImpl implements ValueSetTranslator {
 			}
 		}
 		
-		compose.setInclude(new ArrayList<ValueSet.ConceptSetComponent>(sets.values()));
+		compose.setInclude(new ArrayList<>(sets.values()));
 		valueSet.setCompose(compose);
+		
+		valueSet.getMeta().setLastUpdated(getLastUpdated(concept));
+		valueSet.getMeta().setVersionId(getVersionId(concept));
 		return valueSet;
 	}
 	

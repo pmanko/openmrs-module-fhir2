@@ -17,25 +17,24 @@ import static org.hamcrest.Matchers.nullValue;
 
 import java.util.List;
 
-import org.hamcrest.CoreMatchers;
 import org.hibernate.SessionFactory;
 import org.junit.Before;
 import org.junit.Test;
 import org.openmrs.Person;
 import org.openmrs.PersonAttribute;
 import org.openmrs.api.context.Context;
-import org.openmrs.module.fhir2.TestFhirSpringConfiguration;
-import org.openmrs.test.BaseModuleContextSensitiveTest;
+import org.openmrs.module.fhir2.BaseFhirContextSensitiveTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.test.context.ContextConfiguration;
 
-@ContextConfiguration(classes = TestFhirSpringConfiguration.class, inheritLocations = false)
-public class FhirPersonDaoImplTest extends BaseModuleContextSensitiveTest {
+public class FhirPersonDaoImplTest extends BaseFhirContextSensitiveTest {
 	
 	private static final String PERSON_UUID = "61b38324-e2fd-4feb-95b7-9e9a2a4400df";
 	
 	private static final String WRONG_PERSON_UUID = "wrong_person_uuid";
+	
+	// Patient (patient_id 7) from the standard test dataset
+	private static final String PATIENT_UUID = "5946f880-b197-400b-9caa-a3c661d23041";
 	
 	private static final String PERSON_INITIAL_DATA_XML = "org/openmrs/module/fhir2/api/dao/impl/FhirPersonDaoImplTest_initial_data.xml";
 	
@@ -72,6 +71,19 @@ public class FhirPersonDaoImplTest extends BaseModuleContextSensitiveTest {
 	}
 	
 	@Test
+	public void exists_shouldReturnTrueForPatient() {
+		// given
+		// every Patient is also a Person
+		String uuid = PATIENT_UUID;
+		
+		// when
+		boolean result = fhirPersonDao.exists(uuid);
+		
+		// then
+		assertThat(result, equalTo(true));
+	}
+	
+	@Test
 	public void getActiveAttributesByPersonAndAttributeTypeUuid_shouldReturnPersonAttribute() {
 		Person person = new Person();
 		person.setUuid(PERSON_UUID);
@@ -85,10 +97,10 @@ public class FhirPersonDaoImplTest extends BaseModuleContextSensitiveTest {
 	@Test
 	public void delete_shouldVoidPerson() {
 		Person person = fhirPersonDao.delete(PERSON_UUID);
-		assertThat(person.getVoided(), CoreMatchers.equalTo(true));
-		assertThat(person.getDateVoided(), not(CoreMatchers.nullValue()));
-		assertThat(person.getVoidedBy(), CoreMatchers.equalTo(Context.getAuthenticatedUser()));
-		assertThat(person.getVoidReason(), CoreMatchers.equalTo("Voided via FHIR API"));
+		
+		assertThat(person.getVoided(), equalTo(true));
+		assertThat(person.getDateVoided(), not(nullValue()));
+		assertThat(person.getVoidedBy(), equalTo(Context.getAuthenticatedUser()));
+		assertThat(person.getVoidReason(), equalTo("Voided via FHIR API"));
 	}
-	
 }

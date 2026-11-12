@@ -19,6 +19,8 @@ import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Quantity;
 import org.openmrs.ConceptNumeric;
+import org.openmrs.Obs;
+import org.openmrs.ObsReferenceRange;
 import org.openmrs.module.fhir2.FhirConstants;
 import org.openmrs.module.fhir2.api.translators.ObservationReferenceRangeTranslator;
 import org.springframework.stereotype.Component;
@@ -27,40 +29,73 @@ import org.springframework.stereotype.Component;
 public class ObservationReferenceRangeTranslatorImpl implements ObservationReferenceRangeTranslator {
 	
 	@Override
-	public List<Observation.ObservationReferenceRangeComponent> toFhirResource(@Nonnull ConceptNumeric conceptNumeric) {
+	public List<Observation.ObservationReferenceRangeComponent> toFhirResource(@Nonnull Obs obs) {
+		
+		ConceptNumeric conceptNumeric = null;
+		if (obs.getConcept() instanceof ConceptNumeric) {
+			conceptNumeric = (ConceptNumeric) obs.getConcept();
+		}
+		
 		if (conceptNumeric != null) {
+			boolean allowDecimal = conceptNumeric.getAllowDecimal() != null ? conceptNumeric.getAllowDecimal() : true;
+			
+			Double hiNormal = conceptNumeric.getHiNormal();
+			Double lowNormal = conceptNumeric.getLowNormal();
+			Double hiCritical = conceptNumeric.getHiCritical();
+			Double lowCritical = conceptNumeric.getLowCritical();
+			Double hiAbsolute = conceptNumeric.getHiAbsolute();
+			Double lowAbsolute = conceptNumeric.getLowAbsolute();
+			
+			ObsReferenceRange referenceRange = obs.getReferenceRange();
+			if (referenceRange != null) {
+				hiNormal = referenceRange.getHiNormal();
+				lowNormal = referenceRange.getLowNormal();
+				hiCritical = referenceRange.getHiCritical();
+				lowCritical = referenceRange.getLowCritical();
+				hiAbsolute = referenceRange.getHiAbsolute();
+				lowAbsolute = referenceRange.getLowAbsolute();
+			}
+			
 			List<Observation.ObservationReferenceRangeComponent> observationReferenceRangeComponentList = new ArrayList<>();
-			if (conceptNumeric.getHiNormal() != null || conceptNumeric.getLowNormal() != null) {
-				observationReferenceRangeComponentList.add(createObservationReferenceRange(conceptNumeric.getHiNormal(),
-				    conceptNumeric.getLowNormal(), FhirConstants.OBSERVATION_REFERENCE_NORMAL));
+			if (hiNormal != null || lowNormal != null) {
+				observationReferenceRangeComponentList.add(createObservationReferenceRange(hiNormal, lowNormal,
+				    FhirConstants.OBSERVATION_REFERENCE_NORMAL, allowDecimal));
 			}
 			
-			if (conceptNumeric.getHiCritical() != null || conceptNumeric.getLowCritical() != null) {
-				observationReferenceRangeComponentList.add(createObservationReferenceRange(conceptNumeric.getHiCritical(),
-				    conceptNumeric.getLowCritical(), FhirConstants.OBSERVATION_REFERENCE_TREATMENT));
+			if (hiCritical != null || lowCritical != null) {
+				observationReferenceRangeComponentList.add(createObservationReferenceRange(hiCritical, lowCritical,
+				    FhirConstants.OBSERVATION_REFERENCE_TREATMENT, allowDecimal));
 			}
 			
-			if (conceptNumeric.getHiAbsolute() != null || conceptNumeric.getLowAbsolute() != null) {
-				observationReferenceRangeComponentList.add(createObservationReferenceRange(conceptNumeric.getHiAbsolute(),
-				    conceptNumeric.getLowAbsolute(), FhirConstants.OBSERVATION_REFERENCE_ABSOLUTE));
+			if (hiAbsolute != null || lowAbsolute != null) {
+				observationReferenceRangeComponentList.add(createObservationReferenceRange(hiAbsolute, lowAbsolute,
+				    FhirConstants.OBSERVATION_REFERENCE_ABSOLUTE, allowDecimal));
 			}
 			
 			return observationReferenceRangeComponentList;
-		} else {
-			return null;
 		}
+		
+		return null;
 	}
 	
 	private Observation.ObservationReferenceRangeComponent createObservationReferenceRange(Double hiValue, Double lowValue,
-	        String code) {
+	        String code, boolean allowDecimal) {
 		Observation.ObservationReferenceRangeComponent component = new Observation.ObservationReferenceRangeComponent();
 		
 		if (hiValue != null) {
-			component.setHigh(new Quantity().setValue(hiValue));
+			if (allowDecimal) {
+				component.setHigh(new Quantity().setValue(hiValue));
+			} else {
+				component.setHigh(new Quantity().setValue(hiValue.longValue()));
+			}
 		}
 		
 		if (lowValue != null) {
-			component.setLow(new Quantity().setValue(lowValue));
+			if (allowDecimal) {
+				component.setLow(new Quantity().setValue(lowValue));
+			} else {
+				component.setLow(new Quantity().setValue(lowValue.longValue()));
+			}
 		}
 		
 		CodeableConcept referenceRangeType = new CodeableConcept();

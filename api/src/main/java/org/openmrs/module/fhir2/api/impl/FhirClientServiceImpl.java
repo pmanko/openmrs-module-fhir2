@@ -11,16 +11,17 @@ package org.openmrs.module.fhir2.api.impl;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
-import org.openmrs.api.impl.BaseOpenmrsService;
 import org.openmrs.module.fhir2.api.FhirClientService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Component;
 
-public class FhirClientServiceImpl extends BaseOpenmrsService implements FhirClientService {
+@Component
+public class FhirClientServiceImpl implements FhirClientService {
 	
-	private FhirContext fhirR3;
+	private final FhirContext fhirR3;
 	
-	private FhirContext fhirR4;
+	private final FhirContext fhirR4;
 	
 	@Autowired
 	public FhirClientServiceImpl(@Qualifier("fhirR3") FhirContext fhirR3, @Qualifier("fhirR4") FhirContext fhirR4) {
@@ -37,5 +38,4 @@ public class FhirClientServiceImpl extends BaseOpenmrsService implements FhirCli
 	public IGenericClient getClientForR4(String baseUrl) {
 		return fhirR4.newRestfulGenericClient(baseUrl);
 	}
-	
 }

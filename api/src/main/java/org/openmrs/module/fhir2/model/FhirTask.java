@@ -19,16 +19,19 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
+import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
+import java.util.Date;
 import java.util.Set;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import org.openmrs.BaseOpenmrsMetadata;
+import org.openmrs.Concept;
 
 @Data
 @NoArgsConstructor
@@ -37,12 +40,22 @@ import org.openmrs.BaseOpenmrsMetadata;
 @Table(name = "fhir_task")
 public class FhirTask extends BaseOpenmrsMetadata {
 	
-	// Based on https://www.hl7.org/fhir/task.html v4.0.1
+	/**
+	 * Based on <a href="https://www.hl7.org/fhir/task.html">...</a> v4.0.1
+	 */
 	public enum TaskStatus {
+		DRAFT,
 		REQUESTED,
-		REJECTED,
+		RECEIVED,
 		ACCEPTED,
+		REJECTED,
+		READY,
+		CANCELLED,
+		INPROGRESS,
+		ONHOLD,
+		FAILED,
 		COMPLETED,
+		ENTEREDINERROR,
 		UNKNOWN
 	}
 	
@@ -108,15 +121,25 @@ public class FhirTask extends BaseOpenmrsMetadata {
 	private FhirReference ownerReference;
 	
 	/**
+	 * The request being actioned or the resource being manipulated by this task. This is the
+	 * Observation or other resource that the task is focused on (e.g., the Observation that triggered
+	 * the creation of this nursing task).
+	 */
+	@OneToOne(cascade = CascadeType.ALL)
+	@JoinColumn(name = "focus_reference_id", referencedColumnName = "reference_id")
+	private FhirReference focusReference;
+	
+	/**
 	 * Additional information that may be needed in the execution of the task. see
-	 * https://www.hl7.org/fhir/task-definitions.html#Task.input
+	 * <a href="https://www.hl7.org/fhir/task-definitions.html#Task.input">...</a>
 	 */
 	@OneToMany(cascade = CascadeType.ALL)
 	@JoinColumn(name = "task_id")
 	private Set<FhirTaskInput> input;
 	
 	/**
-	 * Outputs produced by the Task. see https://www.hl7.org/fhir/task-definitions.html#Task.output
+	 * Outputs produced by the Task. see
+	 * <a href="https://www.hl7.org/fhir/task-definitions.html#Task.output">...</a>
 	 */
 	@OneToMany(cascade = CascadeType.ALL)
 	@JoinColumn(name = "task_id")
@@ -129,4 +152,37 @@ public class FhirTask extends BaseOpenmrsMetadata {
 	@OneToOne(cascade = CascadeType.ALL)
 	@JoinColumn(name = "location_reference_id", referencedColumnName = "reference_id")
 	private FhirReference locationReference;
+	
+	/**
+	 * Type of Task
+	 */
+	@ManyToOne
+	@JoinColumn(name = "task_code", referencedColumnName = "concept_id")
+	protected Concept taskCode;
+	
+	/**
+	 * Task that this particular task is part of.
+	 */
+	@OneToMany(cascade = CascadeType.ALL)
+	@JoinTable(name = "fhir_task_part_of_reference", joinColumns = @JoinColumn(name = "task_id"), inverseJoinColumns = @JoinColumn(name = "reference_id"))
+	private Set<FhirReference> partOfReferences;
+	
+	/**
+	 * Actual start time of the execution
+	 */
+	@Column(name = "execution_start_time")
+	private Date executionStartTime;
+	
+	/**
+	 * Actual end time of the execution
+	 */
+	@Column(name = "execution_end_time")
+	private Date executionEndTime;
+	
+	/**
+	 * Comment made about the task
+	 */
+	@Column(name = "comment")
+	private String comment;
+	
 }

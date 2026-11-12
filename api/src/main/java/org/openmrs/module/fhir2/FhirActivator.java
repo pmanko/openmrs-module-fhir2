@@ -13,7 +13,6 @@ import static org.openmrs.module.fhir2.FhirConstants.FHIR2_MODULE_ID;
 
 import javax.annotation.Nonnull;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -21,12 +20,15 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.openmrs.api.context.Context;
 import org.openmrs.module.BaseModuleActivator;
 import org.openmrs.module.Module;
 import org.openmrs.module.ModuleException;
@@ -36,6 +38,7 @@ import org.openmrs.module.fhir2.api.dao.FhirDao;
 import org.openmrs.module.fhir2.api.spi.ModuleLifecycleListener;
 import org.openmrs.module.fhir2.api.spi.ServiceClassLoader;
 import org.openmrs.module.fhir2.api.translators.FhirTranslator;
+import org.openmrs.module.fhir2.api.util.FhirGlobalPropertyHolder;
 import org.openmrs.module.fhir2.model.GroupMember;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
@@ -53,9 +56,11 @@ public class FhirActivator extends BaseModuleActivator implements ApplicationCon
 	@Getter
 	private static ConfigurableApplicationContext applicationContext;
 	
+	private static FhirGlobalPropertyHolder globalPropertyHolder = null;
+	
 	private final Map<String, Set<Class<?>>> services = new HashMap<>();
 	
-	private final List<ModuleLifecycleListener> lifecycleListeners = new ArrayList<>();
+	private final List<ModuleLifecycleListener> lifecycleListeners = new CopyOnWriteArrayList<>();
 	
 	private boolean started = false;
 	
@@ -65,18 +70,16 @@ public class FhirActivator extends BaseModuleActivator implements ApplicationCon
 			throw new ModuleException("Cannot load FHIR2 module as the main application context is not available");
 		}
 		
-		applicationContext.getBean("fhirR4", FhirContext.class).registerCustomType(GroupMember.class);
-		
 		loadModules();
 		started = true;
 		log.info("Started FHIR");
 		
-		lifecycleListeners.forEach(ModuleLifecycleListener::started);
+		notifyListeners("started", ModuleLifecycleListener::started);
 	}
 	
 	@Override
 	public void willRefreshContext() {
-		lifecycleListeners.forEach(ModuleLifecycleListener::willRefresh);
+		notifyListeners("willRefresh", ModuleLifecycleListener::willRefresh);
 		unloadModules();
 	}
 	
@@ -86,24 +89,57 @@ public class FhirActivator extends BaseModuleActivator implements ApplicationCon
 			return;
 		}
 		
+		if (globalPropertyHolder == null) {
+			globalPropertyHolder = new FhirGlobalPropertyHolder();
+			Context.getAdministrationService().addGlobalPropertyListener(globalPropertyHolder);
+		}
+		
+		FhirGlobalPropertyHolder.reset();
+		
 		applicationContext.getBean("fhirR4", FhirContext.class).registerCustomType(GroupMember.class);
 		loadModules();
 		
-		lifecycleListeners.forEach(ModuleLifecycleListener::refreshed);
+		notifyListeners("refreshed", ModuleLifecycleListener::refreshed);
 	}
 	
 	@Override
 	public void willStop() {
-		lifecycleListeners.forEach(ModuleLifecycleListener::willStop);
-		unloadModules();
+		notifyListeners("willStop", ModuleLifecycleListener::willStop);
+		
+		if (globalPropertyHolder != null) {
+			Context.getAdministrationService().removeGlobalPropertyListener(globalPropertyHolder);
+		}
 	}
 	
 	@Override
 	public void stopped() {
-		lifecycleListeners.forEach(ModuleLifecycleListener::stopped);
+		notifyListeners("stopped", ModuleLifecycleListener::stopped);
+		unloadModules();
 		
+		globalPropertyHolder = null;
 		started = false;
 		log.info("Shutdown FHIR");
+	}
+	
+	/**
+	 * Notifies every listener even if an earlier one throws. Both FHIR servlets register here, so one
+	 * failing must not leave the other holding a context that has been closed.
+	 * <p>
+	 * Catches {@link Throwable} rather than {@link Exception} because the failure this is guarding
+	 * against is a refresh that swaps module classloaders, and a listener touching a class from a
+	 * half-unloaded module raises {@link LinkageError} rather than an exception.
+	 */
+	private void notifyListeners(String event, Consumer<ModuleLifecycleListener> notification) {
+		for (ModuleLifecycleListener listener : lifecycleListeners) {
+			try {
+				notification.accept(listener);
+			}
+			catch (Throwable t) {
+				log.error("FHIR2 lifecycle listener {} failed on {}; it may serve stale providers or interceptors until the "
+				        + "next context refresh",
+				    listener.getClass().getName(), event, t);
+			}
+		}
 	}
 	
 	public void addModuleLifecycleListener(@Nonnull ModuleLifecycleListener lifecycleListener) {
@@ -117,7 +153,7 @@ public class FhirActivator extends BaseModuleActivator implements ApplicationCon
 	}
 	
 	@Override
-	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+	public void setApplicationContext(@Nonnull ApplicationContext applicationContext) throws BeansException {
 		if (applicationContext instanceof ConfigurableApplicationContext) {
 			FhirActivator.applicationContext = (ConfigurableApplicationContext) applicationContext;
 		}

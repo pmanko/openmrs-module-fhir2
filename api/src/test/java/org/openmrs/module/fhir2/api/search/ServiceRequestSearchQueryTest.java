@@ -46,22 +46,32 @@ import org.hl7.fhir.r4.model.ServiceRequest;
 import org.junit.Before;
 import org.junit.Test;
 import org.openmrs.TestOrder;
+import org.openmrs.api.cache.CacheConfig;
+import org.openmrs.module.fhir2.BaseFhirContextSensitiveTest;
 import org.openmrs.module.fhir2.FhirConstants;
 import org.openmrs.module.fhir2.FhirTestConstants;
-import org.openmrs.module.fhir2.TestFhirSpringConfiguration;
 import org.openmrs.module.fhir2.api.dao.FhirServiceRequestDao;
 import org.openmrs.module.fhir2.api.search.param.SearchParameterMap;
 import org.openmrs.module.fhir2.api.translators.ServiceRequestTranslator;
-import org.openmrs.test.BaseModuleContextSensitiveTest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.ContextConfiguration;
 
-@ContextConfiguration(classes = TestFhirSpringConfiguration.class, inheritLocations = false)
-public class ServiceRequestSearchQueryTest extends BaseModuleContextSensitiveTest {
+public class ServiceRequestSearchQueryTest extends BaseFhirContextSensitiveTest {
 	
 	private static final String TEST_ORDER_INITIAL_DATA = "org/openmrs/module/fhir2/api/dao/impl/FhirServiceRequestTest_initial_data.xml";
 	
+	private static final String TEST_ORDER_VISIT_DATA = "org/openmrs/module/fhir2/api/dao/impl/FhirServiceRequestTest_visit_data.xml";
+	
 	private static final String SERVICE_REQUEST_UUID = "7d96f25c-4949-4f72-9931-d808fbc226de";
+	
+	private static final String VISIT_SERVICE_REQUEST_UUID = "b5d6e7f8-2a3b-4c5d-8e9f-0a1b2c3d4e50";
+	
+	private static final String VISIT_ENCOUNTER_UUID = "8e2b7d40-1c3a-4f6e-b0d9-5a4c3b2e1f70";
+	
+	private static final String VISIT_UUID = "3c4f1a8e-6a0b-4b5e-9a57-1f2d3e4c5b60";
+	
+	private static final String VISIT_LOCATION_UUID = "8d6c993e-c2cc-11de-8d13-0010c6dffd0f";
+	
+	private static final String VISIT_DATE_CREATED = "2012-03-01";
 	
 	private static final String DATE_CREATED = "2008-11-19";
 	
@@ -124,6 +134,9 @@ public class ServiceRequestSearchQueryTest extends BaseModuleContextSensitiveTes
 	private static final int END_INDEX = 10;
 	
 	@Autowired
+	CacheConfig cacheConfig;
+	
+	@Autowired
 	private FhirServiceRequestDao<TestOrder> dao;
 	
 	@Autowired
@@ -137,6 +150,9 @@ public class ServiceRequestSearchQueryTest extends BaseModuleContextSensitiveTes
 	
 	@Before
 	public void setup() throws Exception {
+		// Needed until TRUNK-6299 in place
+		org.springframework.cache.CacheManager cm = cacheConfig.apiCacheManager();
+		cm.getCacheNames().forEach(name -> cm.getCache(name).clear());
 		executeDataSet(TEST_ORDER_INITIAL_DATA);
 	}
 	
@@ -158,6 +174,7 @@ public class ServiceRequestSearchQueryTest extends BaseModuleContextSensitiveTes
 		IBundleProvider results = search(theParams);
 		
 		assertThat(results, notNullValue());
+		
 		assertThat(results.size(), equalTo(4));
 		
 		List<ServiceRequest> resultList = get(results);
@@ -257,6 +274,7 @@ public class ServiceRequestSearchQueryTest extends BaseModuleContextSensitiveTes
 		            hasProperty("coding",
 		                hasItem(allOf(hasProperty("code", equalTo(TEST_ORDER_LOINC_CODE)),
 		                    hasProperty("system", equalTo(FhirTestConstants.LOINC_SYSTEM_URL)))))),
+		        
 		        hasProperty("code", hasProperty("coding", hasItem(allOf(hasProperty("code", equalTo(TEST_ORDER_CIEL_CODE)),
 		            hasProperty("system", equalTo(FhirTestConstants.CIEL_SYSTEM_URN)))))))));
 	}
@@ -1240,6 +1258,26 @@ public class ServiceRequestSearchQueryTest extends BaseModuleContextSensitiveTes
 	}
 	
 	@Test
+	public void searchForServiceRequests_shouldAddEncounterToResultListWhenIteratedR3() {
+		// GET /ws/fhir2/R3/ProcedureRequest?_id={SERVICE_REQUEST_UUID}&_include:recurse=ProcedureRequest:encounter
+		// (STU3 searches return R4 ServiceRequests internally, so the iterated include must still match them)
+		TokenAndListParam uuid = new TokenAndListParam().addAnd(new TokenParam(SERVICE_REQUEST_UUID));
+		HashSet<Include> includes = new HashSet<>();
+		includes.add(new Include("ProcedureRequest:encounter", true));
+		
+		SearchParameterMap theParams = new SearchParameterMap()
+		        .addParameter(FhirConstants.COMMON_SEARCH_HANDLER, FhirConstants.ID_PROPERTY, uuid)
+		        .addParameter(FhirConstants.INCLUDE_SEARCH_HANDLER, includes);
+		
+		List<IBaseResource> resultList = search(theParams).getResources(START_INDEX, END_INDEX);
+		
+		assertThat(resultList.size(), equalTo(2)); // the ServiceRequest and its Encounter
+		ServiceRequest returnedServiceRequest = (ServiceRequest) resultList.iterator().next();
+		assertThat(resultList, hasItem(allOf(is(instanceOf(Encounter.class)),
+		    hasProperty("id", equalTo(returnedServiceRequest.getEncounter().getReferenceElement().getIdPart())))));
+	}
+	
+	@Test
 	public void searchForServiceRequests_shouldHandleMultipleIncludes() {
 		TokenAndListParam uuid = new TokenAndListParam().addAnd(new TokenParam(SERVICE_REQUEST_UUID));
 		HashSet<Include> includes = new HashSet<>();
@@ -1295,5 +1333,83 @@ public class ServiceRequestSearchQueryTest extends BaseModuleContextSensitiveTes
 		    hasProperty("id", equalTo(returnedServiceRequest.getRequester().getReferenceElement().getIdPart())))));
 		assertThat(resultList, hasItem(allOf(is(instanceOf(Patient.class)),
 		    hasProperty("id", equalTo(returnedServiceRequest.getSubject().getReferenceElement().getIdPart())))));
+	}
+	
+	@Test
+	public void searchForServiceRequests_shouldAddVisitToResultListWhenEncounterPartOfIsIteratedById() {
+		// GET /ServiceRequest?_id={VISIT_SERVICE_REQUEST_UUID}&_include=ServiceRequest:encounter
+		//     &_include:iterate=Encounter:part-of
+		// (Encounter:part-of is the Encounter's Visit)
+		executeDataSet(TEST_ORDER_VISIT_DATA);
+		TokenAndListParam uuid = new TokenAndListParam().addAnd(new TokenParam(VISIT_SERVICE_REQUEST_UUID));
+		
+		SearchParameterMap theParams = new SearchParameterMap()
+		        .addParameter(FhirConstants.COMMON_SEARCH_HANDLER, FhirConstants.ID_PROPERTY, uuid)
+		        .addParameter(FhirConstants.INCLUDE_SEARCH_HANDLER, encounterAndVisitIncludes());
+		
+		assertVisitIncluded(search(theParams));
+	}
+	
+	@Test
+	public void searchForServiceRequests_shouldAddVisitToResultListWhenEncounterPartOfIsIteratedByLastUpdated() {
+		// GET /ServiceRequest?_lastUpdated=ge{VISIT_DATE_CREATED}&_lastUpdated=le{VISIT_DATE_CREATED}
+		//     &_include=ServiceRequest:encounter&_include:iterate=Encounter:part-of
+		// (Encounter:part-of is the Encounter's Visit)
+		executeDataSet(TEST_ORDER_VISIT_DATA);
+		DateRangeParam lastUpdated = new DateRangeParam().setUpperBound(VISIT_DATE_CREATED)
+		        .setLowerBound(VISIT_DATE_CREATED);
+		
+		SearchParameterMap theParams = new SearchParameterMap()
+		        .addParameter(FhirConstants.COMMON_SEARCH_HANDLER, FhirConstants.LAST_UPDATED_PROPERTY, lastUpdated)
+		        .addParameter(FhirConstants.INCLUDE_SEARCH_HANDLER, encounterAndVisitIncludes());
+		
+		assertVisitIncluded(search(theParams));
+	}
+	
+	@Test
+	public void searchForServiceRequests_shouldNotAddVisitToResultListWhenEncounterPartOfIsNotIterated() {
+		// GET /ServiceRequest?_id={VISIT_SERVICE_REQUEST_UUID}&_include=ServiceRequest:encounter
+		//     &_include=Encounter:part-of
+		// (Encounter:part-of is the Encounter's Visit)
+		executeDataSet(TEST_ORDER_VISIT_DATA);
+		TokenAndListParam uuid = new TokenAndListParam().addAnd(new TokenParam(VISIT_SERVICE_REQUEST_UUID));
+		HashSet<Include> includes = new HashSet<>();
+		includes.add(new Include("ServiceRequest:encounter"));
+		includes.add(new Include("Encounter:part-of"));
+		
+		SearchParameterMap theParams = new SearchParameterMap()
+		        .addParameter(FhirConstants.COMMON_SEARCH_HANDLER, FhirConstants.ID_PROPERTY, uuid)
+		        .addParameter(FhirConstants.INCLUDE_SEARCH_HANDLER, includes);
+		
+		List<IBaseResource> resultList = search(theParams).getResources(START_INDEX, END_INDEX);
+		
+		assertThat(resultList.size(), equalTo(2));
+		assertThat(resultList, not(hasItem(hasProperty("id", equalTo(VISIT_UUID)))));
+	}
+	
+	private HashSet<Include> encounterAndVisitIncludes() {
+		HashSet<Include> includes = new HashSet<>();
+		includes.add(new Include("ServiceRequest:encounter"));
+		includes.add(new Include("Encounter:part-of", true));
+		return includes;
+	}
+	
+	private void assertVisitIncluded(IBundleProvider results) {
+		assertThat(results, notNullValue());
+		assertThat(results.size(), equalTo(1));
+		
+		List<IBaseResource> resultList = results.getResources(START_INDEX, END_INDEX);
+		
+		assertThat(resultList.size(), equalTo(3)); // the ServiceRequest, its Encounter and that Encounter's Visit
+		assertThat(((ServiceRequest) resultList.iterator().next()).getIdElement().getIdPart(),
+		    equalTo(VISIT_SERVICE_REQUEST_UUID));
+		assertThat(resultList,
+		    hasItem(allOf(is(instanceOf(Encounter.class)), hasProperty("id", equalTo(VISIT_ENCOUNTER_UUID)))));
+		
+		Encounter visit = resultList.stream().filter(it -> VISIT_UUID.equals(it.getIdElement().getIdPart()))
+		        .map(it -> (Encounter) it).findFirst().orElse(null);
+		assertThat(visit, notNullValue());
+		assertThat(visit.getLocationFirstRep().getLocation().getReferenceElement().getIdPart(),
+		    equalTo(VISIT_LOCATION_UUID));
 	}
 }

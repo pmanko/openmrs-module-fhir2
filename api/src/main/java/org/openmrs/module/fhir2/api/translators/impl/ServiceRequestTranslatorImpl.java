@@ -9,7 +9,11 @@
  */
 package org.openmrs.module.fhir2.api.translators.impl;
 
+import static lombok.AccessLevel.PROTECTED;
 import static org.apache.commons.lang3.Validate.notNull;
+import static org.openmrs.module.fhir2.api.translators.impl.FhirTranslatorUtils.getLastUpdated;
+import static org.openmrs.module.fhir2.api.translators.impl.FhirTranslatorUtils.getVersionId;
+import static org.openmrs.module.fhir2.api.translators.impl.ReferenceHandlingTranslator.createOrderReference;
 
 import javax.annotation.Nonnull;
 
@@ -22,7 +26,7 @@ import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.ReferenceAndListParam;
 import ca.uhn.fhir.rest.param.ReferenceOrListParam;
 import ca.uhn.fhir.rest.param.ReferenceParam;
-import lombok.AccessLevel;
+import lombok.Getter;
 import lombok.Setter;
 import org.hl7.fhir.r4.model.Period;
 import org.hl7.fhir.r4.model.Reference;
@@ -32,7 +36,10 @@ import org.openmrs.Encounter;
 import org.openmrs.Order;
 import org.openmrs.Provider;
 import org.openmrs.TestOrder;
+import org.openmrs.api.context.Context;
+import org.openmrs.module.fhir2.FhirConstants;
 import org.openmrs.module.fhir2.api.FhirTaskService;
+import org.openmrs.module.fhir2.api.search.param.TaskSearchParams;
 import org.openmrs.module.fhir2.api.translators.ConceptTranslator;
 import org.openmrs.module.fhir2.api.translators.EncounterReferenceTranslator;
 import org.openmrs.module.fhir2.api.translators.OrderIdentifierTranslator;
@@ -43,29 +50,34 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
-@Setter(AccessLevel.PACKAGE)
-public class ServiceRequestTranslatorImpl extends BaseReferenceHandlingTranslator implements ServiceRequestTranslator<TestOrder> {
+public class ServiceRequestTranslatorImpl implements ServiceRequestTranslator<TestOrder> {
 	
 	private static final int START_INDEX = 0;
 	
-	private static final int END_INDEX = 10;
+	private static final int END_INDEX = 1;
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private FhirTaskService taskService;
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private ConceptTranslator conceptTranslator;
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private PatientReferenceTranslator patientReferenceTranslator;
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private EncounterReferenceTranslator<Encounter> encounterReferenceTranslator;
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private PractitionerReferenceTranslator<Provider> providerReferenceTranslator;
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private OrderIdentifierTranslator orderIdentifierTranslator;
 	
 	@Override
@@ -80,7 +92,17 @@ public class ServiceRequestTranslatorImpl extends BaseReferenceHandlingTranslato
 		
 		serviceRequest.setCode(conceptTranslator.toFhirResource(order.getConcept()));
 		
+		serviceRequest.addIdentifier(orderIdentifierTranslator.toFhirResource(order));
+		
 		serviceRequest.setIntent(ServiceRequest.ServiceRequestIntent.ORDER);
+		
+		serviceRequest.setPatientInstruction(order.getInstructions());
+		
+		serviceRequest.setPriority(determineServiceRequestPriority(order));
+		
+		if (order.getClinicalHistory() != null) {
+			serviceRequest.addNote().setText(order.getClinicalHistory());
+		}
 		
 		serviceRequest.setSubject(patientReferenceTranslator.toFhirResource(order.getPatient()));
 		
@@ -88,21 +110,30 @@ public class ServiceRequestTranslatorImpl extends BaseReferenceHandlingTranslato
 		
 		serviceRequest.setRequester(providerReferenceTranslator.toFhirResource(order.getOrderer()));
 		
-		serviceRequest.setPerformer(Collections.singletonList(determineServiceRequestPerformer(order.getUuid())));
+		if (Context.hasPrivilege(FhirConstants.GET_TASKS_PRIVILEGE)) {
+			serviceRequest.setPerformer(Collections.singletonList(determineServiceRequestPerformer(order.getUuid())));
+		}
 		
 		serviceRequest
 		        .setOccurrence(new Period().setStart(order.getEffectiveStartDate()).setEnd(order.getEffectiveStopDate()));
 		
-		serviceRequest.getMeta().setLastUpdated(order.getDateChanged());
-		
-		if (order.getPreviousOrder() != null
-		        && (order.getAction() == Order.Action.DISCONTINUE || order.getAction() == Order.Action.REVISE)) {
-			serviceRequest.setReplaces((Collections.singletonList(createOrderReference(order.getPreviousOrder())
-			        .setIdentifier(orderIdentifierTranslator.toFhirResource(order.getPreviousOrder())))));
-		} else if (order.getPreviousOrder() != null && order.getAction() == Order.Action.RENEW) {
-			serviceRequest.setBasedOn(Collections.singletonList(createOrderReference(order.getPreviousOrder())
-			        .setIdentifier(orderIdentifierTranslator.toFhirResource(order.getPreviousOrder()))));
+		if (order.getPreviousOrder() != null) {
+			Reference orderReference = createOrderReference(order.getPreviousOrder(), orderIdentifierTranslator);
+			if (orderReference != null) {
+				switch (order.getAction()) {
+					case DISCONTINUE:
+					case REVISE:
+						serviceRequest.setReplaces(Collections.singletonList(orderReference));
+						break;
+					case RENEW:
+						serviceRequest.setBasedOn(Collections.singletonList(orderReference));
+						break;
+				}
+			}
 		}
+		
+		serviceRequest.getMeta().setLastUpdated(getLastUpdated(order));
+		serviceRequest.getMeta().setVersionId(getVersionId(order));
 		
 		return serviceRequest;
 	}
@@ -110,6 +141,24 @@ public class ServiceRequestTranslatorImpl extends BaseReferenceHandlingTranslato
 	@Override
 	public TestOrder toOpenmrsType(@Nonnull ServiceRequest resource) {
 		throw new UnsupportedOperationException();
+	}
+	
+	private ServiceRequest.ServiceRequestPriority determineServiceRequestPriority(TestOrder order) {
+		if (order.getUrgency() == null) {
+			return null;
+		}
+		
+		switch (order.getUrgency()) {
+			case ROUTINE:
+				// FHIR has no equivalent to ON_SCHEDULED_DATE; an order on a scheduled date is not urgent, so treat it as
+				// routine
+			case ON_SCHEDULED_DATE:
+				return ServiceRequest.ServiceRequestPriority.ROUTINE;
+			case STAT:
+				return ServiceRequest.ServiceRequestPriority.STAT;
+			default:
+				return null;
+		}
 	}
 	
 	private ServiceRequest.ServiceRequestStatus determineServiceRequestStatus(TestOrder order) {
@@ -133,10 +182,10 @@ public class ServiceRequestTranslatorImpl extends BaseReferenceHandlingTranslato
 	}
 	
 	private Reference determineServiceRequestPerformer(String orderUuid) {
-		IBundleProvider results = taskService.searchForTasks(
-		    new ReferenceAndListParam()
-		            .addAnd(new ReferenceOrListParam().add(new ReferenceParam("ServiceRequest", null, orderUuid))),
-		    null, null, null, null, null, null);
+		IBundleProvider results = taskService.searchForTasks(new TaskSearchParams(
+		        new ReferenceAndListParam()
+		                .addAnd(new ReferenceOrListParam().add(new ReferenceParam("ServiceRequest", null, orderUuid))),
+		        null, null, null, null, null, null, null, null));
 		
 		Collection<Task> serviceRequestTasks = results.getResources(START_INDEX, END_INDEX).stream().map(p -> (Task) p)
 		        .collect(Collectors.toList());

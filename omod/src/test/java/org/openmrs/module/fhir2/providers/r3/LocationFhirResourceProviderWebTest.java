@@ -20,6 +20,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.startsWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
@@ -32,8 +33,8 @@ import javax.servlet.ServletException;
 import java.io.InputStream;
 import java.util.Calendar;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 
 import ca.uhn.fhir.model.api.Include;
 import ca.uhn.fhir.rest.param.DateRangeParam;
@@ -130,7 +131,7 @@ public class LocationFhirResourceProviderWebTest extends BaseFhirR3ResourceProvi
 		MockHttpServletResponse response = get("/Location/" + LOCATION_UUID).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), equalTo(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		
 		Location resource = readResponse(response);
 		assertThat(resource.getIdElement().getIdPart(), equalTo(LOCATION_UUID));
@@ -322,7 +323,7 @@ public class LocationFhirResourceProviderWebTest extends BaseFhirR3ResourceProvi
 		
 		verify(locationService).searchForLocations(locationSearchParamsCaptor.capture());
 		
-		HashSet<Include> include = locationSearchParamsCaptor.getValue().getIncludes();
+		Set<Include> include = locationSearchParamsCaptor.getValue().getIncludes();
 		
 		assertThat(include, notNullValue());
 		assertThat(include.size(), equalTo(1));
@@ -336,7 +337,7 @@ public class LocationFhirResourceProviderWebTest extends BaseFhirR3ResourceProvi
 		
 		verify(locationService).searchForLocations(locationSearchParamsCaptor.capture());
 		
-		HashSet<Include> revInclude = locationSearchParamsCaptor.getValue().getRevIncludes();
+		Set<Include> revInclude = locationSearchParamsCaptor.getValue().getRevIncludes();
 		
 		assertThat(revInclude, notNullValue());
 		assertThat(revInclude.size(), equalTo(1));
@@ -350,7 +351,7 @@ public class LocationFhirResourceProviderWebTest extends BaseFhirR3ResourceProvi
 		
 		verify(locationService).searchForLocations(locationSearchParamsCaptor.capture());
 		
-		HashSet<Include> revInclude = locationSearchParamsCaptor.getValue().getRevIncludes();
+		Set<Include> revInclude = locationSearchParamsCaptor.getValue().getRevIncludes();
 		
 		assertThat(revInclude, notNullValue());
 		assertThat(revInclude.size(), equalTo(1));
@@ -364,7 +365,7 @@ public class LocationFhirResourceProviderWebTest extends BaseFhirR3ResourceProvi
 		
 		verify(locationService).searchForLocations(locationSearchParamsCaptor.capture());
 		
-		HashSet<Include> revInclude = locationSearchParamsCaptor.getValue().getRevIncludes();
+		Set<Include> revInclude = locationSearchParamsCaptor.getValue().getRevIncludes();
 		
 		assertThat(revInclude, notNullValue());
 		assertThat(revInclude.size(), equalTo(2));
@@ -412,7 +413,7 @@ public class LocationFhirResourceProviderWebTest extends BaseFhirR3ResourceProvi
 		MockHttpServletResponse response = get(uri).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), equalTo(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(readBundleResponse(response).getEntry().size(), greaterThanOrEqualTo(1));
 	}
 	
@@ -486,7 +487,7 @@ public class LocationFhirResourceProviderWebTest extends BaseFhirR3ResourceProvi
 		MockHttpServletResponse response = delete("/Location/" + LOCATION_UUID).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), equalTo(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 	}
 	
 	@Test
@@ -496,6 +497,6 @@ public class LocationFhirResourceProviderWebTest extends BaseFhirR3ResourceProvi
 		MockHttpServletResponse response = delete("/Location/" + WRONG_LOCATION_UUID).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isNotFound());
-		assertThat(response.getContentType(), equalTo(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 	}
 }

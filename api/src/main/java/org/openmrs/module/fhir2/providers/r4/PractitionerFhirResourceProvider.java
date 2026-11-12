@@ -10,6 +10,7 @@
 package org.openmrs.module.fhir2.providers.r4;
 
 import static lombok.AccessLevel.PACKAGE;
+import static lombok.AccessLevel.PROTECTED;
 
 import javax.annotation.Nonnull;
 
@@ -21,18 +22,20 @@ import ca.uhn.fhir.rest.annotation.Delete;
 import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.IncludeParam;
 import ca.uhn.fhir.rest.annotation.OptionalParam;
+import ca.uhn.fhir.rest.annotation.Patch;
 import ca.uhn.fhir.rest.annotation.Read;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
 import ca.uhn.fhir.rest.annotation.Search;
-import ca.uhn.fhir.rest.annotation.Update;
 import ca.uhn.fhir.rest.api.MethodOutcome;
+import ca.uhn.fhir.rest.api.PatchTypeEnum;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
+import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.param.DateRangeParam;
 import ca.uhn.fhir.rest.param.StringAndListParam;
 import ca.uhn.fhir.rest.param.TokenAndListParam;
-import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.collections.CollectionUtils;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -45,16 +48,17 @@ import org.hl7.fhir.r4.model.Practitioner;
 import org.hl7.fhir.r4.model.ServiceRequest;
 import org.openmrs.module.fhir2.api.FhirPractitionerService;
 import org.openmrs.module.fhir2.api.annotations.R4Provider;
+import org.openmrs.module.fhir2.api.search.param.PractitionerSearchParams;
 import org.openmrs.module.fhir2.providers.util.FhirProviderUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component("practitionerFhirR4ResourceProvider")
 @R4Provider
-@Setter(PACKAGE)
-public class PractitionerFhirResourceProvider implements IResourceProvider {
+public class PractitionerFhirResourceProvider extends BaseUpsertFhirResourceProvider<Practitioner> {
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PACKAGE, onMethod_ = @Autowired)
 	private FhirPractitionerService practitionerService;
 	
 	@Override
@@ -77,16 +81,29 @@ public class PractitionerFhirResourceProvider implements IResourceProvider {
 		return FhirProviderUtils.buildCreate(practitionerService.create(practitioner));
 	}
 	
-	@Update
-	@SuppressWarnings("unused")
-	public MethodOutcome updatePractitioner(@IdParam IdType id, @ResourceParam Practitioner practitioner) {
+	@Override
+	protected MethodOutcome doUpsert(IdType id, Practitioner practitioner, RequestDetails requestDetails,
+	        boolean createIfNotExists) {
 		if (id == null || id.getIdPart() == null) {
 			throw new InvalidRequestException("id must be specified to update");
 		}
 		
 		practitioner.setId(id.getIdPart());
 		
-		return FhirProviderUtils.buildUpdate(practitionerService.update(id.getIdPart(), practitioner));
+		return FhirProviderUtils
+		        .buildUpdate(practitionerService.update(id.getIdPart(), practitioner, requestDetails, createIfNotExists));
+	}
+	
+	@Patch
+	public MethodOutcome patchPractitioner(@IdParam IdType id, PatchTypeEnum patchType, @ResourceParam String body,
+	        RequestDetails requestDetails) {
+		if (id == null || id.getIdPart() == null) {
+			throw new InvalidRequestException("id must be specified to update Practitioner resource");
+		}
+		
+		Practitioner practitioner = practitionerService.patch(id.getIdPart(), patchType, body, requestDetails);
+		
+		return FhirProviderUtils.buildPatch(practitioner);
 	}
 	
 	@Delete
@@ -114,7 +131,7 @@ public class PractitionerFhirResourceProvider implements IResourceProvider {
 			revIncludes = null;
 		}
 		
-		return practitionerService.searchForPractitioners(identifier, name, given, family, city, state, postalCode, country,
-		    id, lastUpdated, revIncludes);
+		return practitionerService.searchForPractitioners(new PractitionerSearchParams(identifier, name, given, family, city,
+		        state, postalCode, country, id, lastUpdated, revIncludes));
 	}
 }

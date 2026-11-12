@@ -9,70 +9,108 @@
  */
 package org.openmrs.module.fhir2.api.impl;
 
-import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertThrows;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.not;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
-import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.MedicationDispense;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.openmrs.module.fhir2.api.FhirGlobalPropertyService;
+import org.openmrs.module.fhir2.api.handler.FhirResourceHandler;
 import org.openmrs.module.fhir2.api.search.param.MedicationDispenseSearchParams;
+import org.openmrs.module.fhir2.providers.r4.MockIBundleProvider;
 
 @RunWith(MockitoJUnitRunner.class)
 public class FhirMedicationDispenseServiceImplTest {
 	
-	private String MEDICATION_DISPENSE_UUID = UUID.randomUUID().toString();
+	private static final String MEDICATION_DISPENSE_UUID = "43578769-f1a4-46af-b08b-d9fe8a07066f";
 	
-	private FhirMedicationDispenseServiceImpl dispenseService;
+	private static final int START_INDEX = 0;
+	
+	private static final int END_INDEX = 100;
+	
+	@Mock
+	private FhirResourceHandler<MedicationDispense> handler;
+	
+	@Mock
+	private FhirGlobalPropertyService globalPropertyService;
+	
+	private FhirMedicationDispenseServiceImpl service;
 	
 	@Before
 	public void setup() {
-		dispenseService = new FhirMedicationDispenseServiceImpl();
+		lenient().when(handler.getImplicitProfile())
+		        .thenReturn("http://fhir.openmrs.org/StructureDefinition/openmrs-medicationdispense");
+		lenient().when(handler.acceptsSearch(any())).thenReturn(true);
+		
+		service = new FhirMedicationDispenseServiceImpl();
+		service.setHandlers(Collections.singletonList(handler));
+		service.setGlobalPropertyService(globalPropertyService);
 	}
 	
 	@Test
-	public void get_shouldThrowExceptionForSingle() {
-		assertThrows(ResourceNotFoundException.class, () -> dispenseService.get(MEDICATION_DISPENSE_UUID));
+	public void searchMedicationDispenses_shouldFanOutAndReturnHandlerResults() {
+		when(handler.search(any())).thenReturn(bundleOf(2));
+		
+		IBundleProvider results = service.searchMedicationDispenses(new MedicationDispenseSearchParams());
+		List<IBaseResource> resultList = results.getResources(START_INDEX, END_INDEX);
+		
+		assertThat(results, notNullValue());
+		assertThat(resultList, not(empty()));
+		assertThat(resultList, hasSize(2));
+		verify(handler).search(any());
 	}
 	
 	@Test
-	public void get_shouldThrowExceptionForMultiple() {
-		List<String> uuids = Collections.singletonList(MEDICATION_DISPENSE_UUID);
-		assertThrows(ResourceNotFoundException.class, () -> dispenseService.get(uuids));
+	public void create_shouldDispatchToHandler() {
+		MedicationDispense input = new MedicationDispense();
+		MedicationDispense created = new MedicationDispense();
+		created.setId(MEDICATION_DISPENSE_UUID);
+		when(handler.canHandle(input)).thenReturn(true);
+		when(handler.create(input)).thenReturn(created);
+		
+		MedicationDispense result = service.create(input);
+		
+		assertThat(result, notNullValue());
+		verify(handler).create(input);
 	}
 	
 	@Test
-	public void create_shouldThrowException() {
-		MedicationDispense dispense = new MedicationDispense();
-		dispense.setId(MEDICATION_DISPENSE_UUID);
-		assertThrows(UnsupportedOperationException.class, () -> dispenseService.create(dispense));
+	public void update_shouldDispatchToHandler() {
+		MedicationDispense input = new MedicationDispense();
+		input.setId(MEDICATION_DISPENSE_UUID);
+		MedicationDispense updated = new MedicationDispense();
+		updated.setId(MEDICATION_DISPENSE_UUID);
+		when(handler.exists(MEDICATION_DISPENSE_UUID)).thenReturn(true);
+		when(handler.update(MEDICATION_DISPENSE_UUID, input, null, false)).thenReturn(updated);
+		
+		MedicationDispense result = service.update(MEDICATION_DISPENSE_UUID, input);
+		
+		assertThat(result, notNullValue());
+		verify(handler).update(MEDICATION_DISPENSE_UUID, input, null, false);
 	}
 	
-	@Test
-	public void update_shouldThrowException() {
-		MedicationDispense dispense = new MedicationDispense();
-		dispense.setId(MEDICATION_DISPENSE_UUID);
-		assertThrows(UnsupportedOperationException.class, () -> dispenseService.update(MEDICATION_DISPENSE_UUID, dispense));
-	}
-	
-	@Test
-	public void delete_shouldThrowException() {
-		MedicationDispense dispense = new MedicationDispense();
-		dispense.setId(MEDICATION_DISPENSE_UUID);
-		assertThrows(UnsupportedOperationException.class, () -> dispenseService.delete(MEDICATION_DISPENSE_UUID));
-	}
-	
-	@Test
-	public void search_shouldReturnEmptyBundle() {
-		IBundleProvider bundle = dispenseService.searchMedicationDispenses(new MedicationDispenseSearchParams());
-		assertThat(bundle.size(), equalTo(0));
+	private static IBundleProvider bundleOf(int n) {
+		List<MedicationDispense> rows = new ArrayList<>(n);
+		for (int i = 0; i < n; i++) {
+			rows.add(new MedicationDispense());
+		}
+		return new MockIBundleProvider<>(rows, 10, 1);
 	}
 }

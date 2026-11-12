@@ -10,6 +10,7 @@
 package org.openmrs.module.fhir2.providers.r3;
 
 import static lombok.AccessLevel.PACKAGE;
+import static lombok.AccessLevel.PROTECTED;
 
 import javax.annotation.Nonnull;
 
@@ -36,9 +37,10 @@ import ca.uhn.fhir.rest.param.TokenAndListParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.collections.CollectionUtils;
-import org.hl7.fhir.convertors.conv30_40.Location30_40;
+import org.hl7.fhir.convertors.factory.VersionConvertorFactory_30_40;
 import org.hl7.fhir.dstu3.model.Encounter;
 import org.hl7.fhir.dstu3.model.IdType;
 import org.hl7.fhir.dstu3.model.Location;
@@ -54,10 +56,10 @@ import org.springframework.stereotype.Component;
 
 @Component("locationFhirR3ResourceProvider")
 @R3Provider
-@Setter(PACKAGE)
 public class LocationFhirResourceProvider implements IResourceProvider {
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PACKAGE, onMethod_ = @Autowired)
 	private FhirLocationService locationService;
 	
 	@Override
@@ -73,13 +75,13 @@ public class LocationFhirResourceProvider implements IResourceProvider {
 			throw new ResourceNotFoundException("Could not find location with Id " + id.getIdPart());
 		}
 		
-		return Location30_40.convertLocation(location);
+		return (Location) VersionConvertorFactory_30_40.convertResource(location);
 	}
 	
 	@Create
 	public MethodOutcome createLocation(@ResourceParam Location location) {
-		return FhirProviderUtils
-		        .buildCreate(Location30_40.convertLocation(locationService.create(Location30_40.convertLocation(location))));
+		return FhirProviderUtils.buildCreate(VersionConvertorFactory_30_40.convertResource(locationService
+		        .create((org.hl7.fhir.r4.model.Location) VersionConvertorFactory_30_40.convertResource(location))));
 	}
 	
 	@Update
@@ -91,8 +93,9 @@ public class LocationFhirResourceProvider implements IResourceProvider {
 		
 		location.setId(id.getIdPart());
 		
-		return FhirProviderUtils.buildUpdate(
-		    Location30_40.convertLocation(locationService.update(id.getIdPart(), Location30_40.convertLocation(location))));
+		return FhirProviderUtils
+		        .buildUpdate(VersionConvertorFactory_30_40.convertResource(locationService.update(id.getIdPart(),
+		            (org.hl7.fhir.r4.model.Location) VersionConvertorFactory_30_40.convertResource(location))));
 	}
 	
 	@Delete

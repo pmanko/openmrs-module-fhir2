@@ -9,6 +9,7 @@
  */
 package org.openmrs.module.fhir2.api.translators.impl;
 
+import static lombok.AccessLevel.PROTECTED;
 import static org.apache.commons.lang3.Validate.notNull;
 
 import javax.annotation.Nonnull;
@@ -16,7 +17,7 @@ import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 
-import lombok.AccessLevel;
+import lombok.Getter;
 import lombok.Setter;
 import org.hl7.fhir.r4.model.AllergyIntolerance;
 import org.hl7.fhir.r4.model.CodeableConcept;
@@ -30,13 +31,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
-@Setter(AccessLevel.PACKAGE)
 public class AllergyIntoleranceReactionComponentTranslatorImpl implements AllergyIntoleranceReactionComponentTranslator {
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private AllergyIntoleranceSeverityTranslator severityTranslator;
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private ConceptTranslator conceptTranslator;
 	
 	@Override
@@ -89,7 +91,9 @@ public class AllergyIntoleranceReactionComponentTranslatorImpl implements Allerg
 		
 		if (allergen.getCodedAllergen() != null) {
 			allergySubstance = conceptTranslator.toFhirResource(allergen.getCodedAllergen());
-			allergySubstance.setText(allergen.getNonCodedAllergen());
+			if (allergen.getNonCodedAllergen() != null) {
+				allergySubstance.setText(allergen.getNonCodedAllergen());
+			}
 		}
 		
 		return allergySubstance;
@@ -101,8 +105,11 @@ public class AllergyIntoleranceReactionComponentTranslatorImpl implements Allerg
 		if (reactions != null) {
 			for (AllergyReaction reaction : reactions) {
 				if (reaction.getReaction() != null) {
-					manifestations.add(
-					    conceptTranslator.toFhirResource(reaction.getReaction()).setText(reaction.getReactionNonCoded()));
+					CodeableConcept manifestation = conceptTranslator.toFhirResource(reaction.getReaction());
+					if (reaction.getReactionNonCoded() != null) {
+						manifestation.setText(reaction.getReactionNonCoded());
+					}
+					manifestations.add(manifestation);
 				}
 			}
 		}

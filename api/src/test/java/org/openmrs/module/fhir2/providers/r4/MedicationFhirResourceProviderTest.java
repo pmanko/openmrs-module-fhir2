@@ -17,9 +17,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
-import static org.mockito.hamcrest.MockitoHamcrest.argThat;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -29,6 +27,7 @@ import java.util.List;
 import ca.uhn.fhir.model.api.Include;
 import ca.uhn.fhir.rest.api.MethodOutcome;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
+import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.param.DateRangeParam;
 import ca.uhn.fhir.rest.param.TokenAndListParam;
 import ca.uhn.fhir.rest.param.TokenOrListParam;
@@ -48,6 +47,7 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.openmrs.module.fhir2.FhirConstants;
 import org.openmrs.module.fhir2.api.FhirMedicationService;
+import org.openmrs.module.fhir2.api.search.param.MedicationSearchParams;
 
 @RunWith(MockitoJUnitRunner.class)
 public class MedicationFhirResourceProviderTest {
@@ -67,6 +67,9 @@ public class MedicationFhirResourceProviderTest {
 	private static final int START_INDEX = 0;
 	
 	private static final int END_INDEX = 10;
+	
+	@Mock
+	private RequestDetails mockRequestDetails;
 	
 	@Mock
 	private FhirMedicationService fhirMedicationService;
@@ -119,7 +122,7 @@ public class MedicationFhirResourceProviderTest {
 		TokenAndListParam code = new TokenAndListParam();
 		code.addAnd(new TokenOrListParam().addOr(new TokenParam().setValue(CODE)));
 		
-		when(fhirMedicationService.searchForMedications(argThat(is(code)), isNull(), isNull(), isNull(), isNull(), isNull()))
+		when(fhirMedicationService.searchForMedications(new MedicationSearchParams(code, null, null, null, null, null)))
 		        .thenReturn(new MockIBundleProvider<>(Collections.singletonList(medication), PREFERRED_PAGE_SIZE, COUNT));
 		
 		IBundleProvider results = resourceProvider.searchForMedication(code, null, null, null, null, null);
@@ -136,9 +139,9 @@ public class MedicationFhirResourceProviderTest {
 		TokenAndListParam dosageFormCode = new TokenAndListParam();
 		dosageFormCode.addAnd(new TokenOrListParam().addOr(new TokenParam().setValue(CODE)));
 		
-		when(fhirMedicationService.searchForMedications(isNull(), argThat(is(dosageFormCode)), isNull(), isNull(), isNull(),
-		    isNull())).thenReturn(
-		        new MockIBundleProvider<>(Collections.singletonList(medication), PREFERRED_PAGE_SIZE, COUNT));
+		when(fhirMedicationService
+		        .searchForMedications(new MedicationSearchParams(null, dosageFormCode, null, null, null, null))).thenReturn(
+		            new MockIBundleProvider<>(Collections.singletonList(medication), PREFERRED_PAGE_SIZE, COUNT));
 		
 		IBundleProvider results = resourceProvider.searchForMedication(null, dosageFormCode, null, null, null, null);
 		
@@ -154,9 +157,9 @@ public class MedicationFhirResourceProviderTest {
 		TokenAndListParam ingredientCode = new TokenAndListParam();
 		ingredientCode.addAnd(new TokenOrListParam().addOr(new TokenParam().setValue(CODE)));
 		
-		when(fhirMedicationService.searchForMedications(isNull(), isNull(), argThat(is(ingredientCode)), isNull(), isNull(),
-		    isNull())).thenReturn(
-		        new MockIBundleProvider<>(Collections.singletonList(medication), PREFERRED_PAGE_SIZE, COUNT));
+		when(fhirMedicationService
+		        .searchForMedications(new MedicationSearchParams(null, null, ingredientCode, null, null, null))).thenReturn(
+		            new MockIBundleProvider<>(Collections.singletonList(medication), PREFERRED_PAGE_SIZE, COUNT));
 		
 		IBundleProvider results = resourceProvider.searchForMedication(null, null, ingredientCode, null, null, null);
 		
@@ -172,7 +175,7 @@ public class MedicationFhirResourceProviderTest {
 		TokenAndListParam uuid = new TokenAndListParam();
 		uuid.addAnd(new TokenParam().setValue(MEDICATION_UUID));
 		
-		when(fhirMedicationService.searchForMedications(isNull(), isNull(), isNull(), argThat(is(uuid)), isNull(), isNull()))
+		when(fhirMedicationService.searchForMedications(new MedicationSearchParams(null, null, null, uuid, null, null)))
 		        .thenReturn(new MockIBundleProvider<>(Collections.singletonList(medication), PREFERRED_PAGE_SIZE, COUNT));
 		
 		IBundleProvider results = resourceProvider.searchForMedication(null, null, null, uuid, null, null);
@@ -188,9 +191,9 @@ public class MedicationFhirResourceProviderTest {
 	public void searchForMedication_shouldReturnMatchingBundleOfMedicationByLastUpdated() {
 		DateRangeParam lastUpdated = new DateRangeParam().setLowerBound(LAST_UPDATED_DATE).setUpperBound(LAST_UPDATED_DATE);
 		
-		when(fhirMedicationService.searchForMedications(isNull(), isNull(), isNull(), isNull(), argThat(is(lastUpdated)),
-		    isNull())).thenReturn(
-		        new MockIBundleProvider<>(Collections.singletonList(medication), PREFERRED_PAGE_SIZE, COUNT));
+		when(fhirMedicationService
+		        .searchForMedications(new MedicationSearchParams(null, null, null, null, lastUpdated, null))).thenReturn(
+		            new MockIBundleProvider<>(Collections.singletonList(medication), PREFERRED_PAGE_SIZE, COUNT));
 		
 		IBundleProvider results = resourceProvider.searchForMedication(null, null, null, null, lastUpdated, null);
 		
@@ -203,7 +206,7 @@ public class MedicationFhirResourceProviderTest {
 	
 	@Test
 	public void searchForMedication_shouldAddRelatedResourcesForRevInclude() {
-		when(fhirMedicationService.searchForMedications(any(), any(), any(), any(), any(), any())).thenReturn(
+		when(fhirMedicationService.searchForMedications(any())).thenReturn(
 		    new MockIBundleProvider<>(Arrays.asList(medication, new MedicationRequest()), PREFERRED_PAGE_SIZE, COUNT));
 		
 		HashSet<Include> revIncludes = new HashSet<>();
@@ -222,7 +225,7 @@ public class MedicationFhirResourceProviderTest {
 	
 	@Test
 	public void searchForMedication_shouldNotAddResourcesForEmptyRevInclude() {
-		when(fhirMedicationService.searchForMedications(any(), any(), any(), any(), any(), isNull()))
+		when(fhirMedicationService.searchForMedications(new MedicationSearchParams(null, null, null, null, null, null)))
 		        .thenReturn(new MockIBundleProvider<>(Collections.singletonList(medication), PREFERRED_PAGE_SIZE, COUNT));
 		
 		HashSet<Include> revIncludes = new HashSet<>();
@@ -248,43 +251,46 @@ public class MedicationFhirResourceProviderTest {
 	}
 	
 	@Test
-	public void updateMedication_shouldUpdateRequestedMedication() {
+	public void doUpsert_shouldUpdateRequestedMedication() {
 		Medication med = medication;
 		med.setStatus(Medication.MedicationStatus.INACTIVE);
 		
-		when(fhirMedicationService.update(MEDICATION_UUID, medication)).thenReturn(med);
+		when(fhirMedicationService.update(MEDICATION_UUID, medication, mockRequestDetails, false)).thenReturn(med);
 		
-		MethodOutcome result = resourceProvider.updateMedication(new IdType().setValue(MEDICATION_UUID), medication);
+		MethodOutcome result = resourceProvider.doUpsert(new IdType().setValue(MEDICATION_UUID), medication,
+		    mockRequestDetails, false);
 		assertThat(result, notNullValue());
 		assertThat(result.getResource(), equalTo(med));
 	}
 	
 	@Test(expected = InvalidRequestException.class)
-	public void updateMedication_shouldThrowInvalidRequestForUuidMismatch() {
-		when(fhirMedicationService.update(WRONG_MEDICATION_UUID, medication)).thenThrow(InvalidRequestException.class);
+	public void doUpsert_shouldThrowInvalidRequestForUuidMismatch() {
+		when(fhirMedicationService.update(WRONG_MEDICATION_UUID, medication, mockRequestDetails, false))
+		        .thenThrow(InvalidRequestException.class);
 		
-		resourceProvider.updateMedication(new IdType().setValue(WRONG_MEDICATION_UUID), medication);
+		resourceProvider.doUpsert(new IdType().setValue(WRONG_MEDICATION_UUID), medication, mockRequestDetails, false);
 	}
 	
 	@Test(expected = InvalidRequestException.class)
-	public void updateMedication_shouldThrowInvalidRequestForMissingId() {
+	public void doUpsert_shouldThrowInvalidRequestForMissingId() {
 		Medication noIdMedication = new Medication();
 		
-		when(fhirMedicationService.update(MEDICATION_UUID, noIdMedication)).thenThrow(InvalidRequestException.class);
+		when(fhirMedicationService.update(MEDICATION_UUID, noIdMedication, mockRequestDetails, false))
+		        .thenThrow(InvalidRequestException.class);
 		
-		resourceProvider.updateMedication(new IdType().setValue(MEDICATION_UUID), noIdMedication);
+		resourceProvider.doUpsert(new IdType().setValue(MEDICATION_UUID), noIdMedication, mockRequestDetails, false);
 	}
 	
 	@Test(expected = MethodNotAllowedException.class)
-	public void updateMedication_shouldThrowMethodNotAllowedIfDoesNotExist() {
+	public void doUpsert_shouldThrowMethodNotAllowedIfDoesNotExist() {
 		Medication wrongMedication = new Medication();
 		
 		wrongMedication.setId(WRONG_MEDICATION_UUID);
 		
-		when(fhirMedicationService.update(WRONG_MEDICATION_UUID, wrongMedication))
+		when(fhirMedicationService.update(WRONG_MEDICATION_UUID, wrongMedication, mockRequestDetails, false))
 		        .thenThrow(MethodNotAllowedException.class);
 		
-		resourceProvider.updateMedication(new IdType().setValue(WRONG_MEDICATION_UUID), wrongMedication);
+		resourceProvider.doUpsert(new IdType().setValue(WRONG_MEDICATION_UUID), wrongMedication, mockRequestDetails, false);
 	}
 	
 	@Test

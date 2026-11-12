@@ -15,28 +15,38 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasProperty;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 
+import java.time.LocalDateTime;
+import java.time.Month;
+import java.time.ZoneId;
 import java.util.Collections;
+import java.util.Date;
+import java.util.List;
 
+import ca.uhn.fhir.rest.param.ReferenceAndListParam;
+import ca.uhn.fhir.rest.param.ReferenceOrListParam;
+import ca.uhn.fhir.rest.param.ReferenceParam;
+import ca.uhn.fhir.rest.param.TokenAndListParam;
+import ca.uhn.fhir.rest.param.TokenOrListParam;
 import org.hibernate.SessionFactory;
 import org.junit.Before;
 import org.junit.Test;
 import org.openmrs.Concept;
+import org.openmrs.api.ConceptService;
 import org.openmrs.api.db.hibernate.HibernateConceptDAO;
+import org.openmrs.module.fhir2.BaseFhirContextSensitiveTest;
 import org.openmrs.module.fhir2.FhirConstants;
-import org.openmrs.module.fhir2.TestFhirSpringConfiguration;
+import org.openmrs.module.fhir2.api.search.param.SearchParameterMap;
 import org.openmrs.module.fhir2.model.FhirReference;
 import org.openmrs.module.fhir2.model.FhirTask;
 import org.openmrs.module.fhir2.model.FhirTaskInput;
 import org.openmrs.module.fhir2.model.FhirTaskOutput;
-import org.openmrs.test.BaseModuleContextSensitiveTest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.ContextConfiguration;
 
-@ContextConfiguration(classes = TestFhirSpringConfiguration.class, inheritLocations = false)
-public class FhirTaskDaoImplTest extends BaseModuleContextSensitiveTest {
+public class FhirTaskDaoImplTest extends BaseFhirContextSensitiveTest {
 	
 	private static final String TASK_DATA_XML = "org/openmrs/module/fhir2/api/dao/impl/FhirTaskDaoImplTest_initial_data.xml";
 	
@@ -45,6 +55,10 @@ public class FhirTaskDaoImplTest extends BaseModuleContextSensitiveTest {
 	private static final String TASK_UUID = "d899333c-5bd4-45cc-b1e7-2f9542dbcbf6";
 	
 	private static final String BASED_ON_ORDER_UUID = "7d96f25c-4949-4f72-9931-d808fbc226de";
+	
+	private static final String PARENT_TASK_UUID = "c0a3af38-c0a9-4c2e-9cc0-8e0440e357e5";
+	
+	private static final String TASK_CODE_CONCEPT_UUID = "efc232b8-e591-4e93-b135-1cf8b4e30b95";
 	
 	private static final FhirTask.TaskStatus NEW_STATUS = FhirTask.TaskStatus.ACCEPTED;
 	
@@ -62,10 +76,17 @@ public class FhirTaskDaoImplTest extends BaseModuleContextSensitiveTest {
 	
 	private static final String DIAGNOSTIC_REPORT_UUID = "584ebe74-eb7e-4dc2-ae0d-af941a163279";
 	
+	private static final String OBSERVATION_UUID = "f1937b1a-dfff-43ac-ba9c-a62a48620b28";
+	
+	private static final String FOCUS_OBSERVATION_UUID = "5085AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+	
 	private FhirTaskDaoImpl dao;
 	
 	@Autowired
 	private SessionFactory sessionFactory;
+	
+	@Autowired
+	private ConceptService conceptService;
 	
 	@Before
 	public void setup() throws Exception {
@@ -213,6 +234,92 @@ public class FhirTaskDaoImplTest extends BaseModuleContextSensitiveTest {
 	}
 	
 	@Test
+	public void saveTask_shouldUpdateTaskCode() {
+		FhirTask toUpdate = dao.get(TASK_UUID);
+		
+		Concept taskCode = conceptService.getConceptByUuid(TASK_CODE_CONCEPT_UUID);
+		
+		toUpdate.setTaskCode(taskCode);
+		
+		dao.createOrUpdate(toUpdate);
+		
+		FhirTask result = dao.get(TASK_UUID);
+		
+		assertThat(result.getTaskCode(), notNullValue());
+		assertThat(result.getTaskCode(), equalTo(taskCode));
+	}
+	
+	@Test
+	public void saveTask_shouldUpdatePartOfReferences() {
+		FhirTask toUpdate = dao.get(TASK_UUID);
+		
+		FhirReference partOfReference = new FhirReference();
+		partOfReference.setType(FhirConstants.TASK);
+		partOfReference.setReference(PARENT_TASK_UUID);
+		partOfReference.setName("TEMP");
+		
+		toUpdate.setPartOfReferences(Collections.singleton(partOfReference));
+		
+		dao.createOrUpdate(toUpdate);
+		
+		FhirTask result = dao.get(TASK_UUID);
+		
+		assertThat(result.getPartOfReferences(), notNullValue());
+		assertThat(result.getPartOfReferences().size(), greaterThan(0));
+		assertThat(result.getPartOfReferences(), hasItem(hasProperty("type", equalTo(FhirConstants.TASK))));
+		assertThat(result.getPartOfReferences(), hasItem(hasProperty("reference", equalTo(PARENT_TASK_UUID))));
+	}
+	
+	@Test
+	public void saveTask_shouldUpdateExecutionStartTime() {
+		FhirTask toUpdate = dao.get(TASK_UUID);
+		
+		LocalDateTime localDateTime = LocalDateTime.of(2024, Month.APRIL, 12, 10, 0);
+		Date executionStartTime = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+		
+		toUpdate.setExecutionStartTime(executionStartTime);
+		
+		dao.createOrUpdate(toUpdate);
+		
+		FhirTask result = dao.get(TASK_UUID);
+		
+		assertThat(result.getExecutionStartTime(), notNullValue());
+		assertThat(result.getExecutionStartTime(), equalTo(executionStartTime));
+	}
+	
+	@Test
+	public void saveTask_shouldUpdateExecutionEndTime() {
+		FhirTask toUpdate = dao.get(TASK_UUID);
+		
+		LocalDateTime localDateTime = LocalDateTime.of(2024, Month.APRIL, 12, 17, 0);
+		Date executionEndTime = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+		
+		toUpdate.setExecutionEndTime(executionEndTime);
+		
+		dao.createOrUpdate(toUpdate);
+		
+		FhirTask result = dao.get(TASK_UUID);
+		
+		assertThat(result.getExecutionEndTime(), notNullValue());
+		assertThat(result.getExecutionEndTime(), equalTo(executionEndTime));
+	}
+	
+	@Test
+	public void saveTask_shouldUpdateComment() {
+		FhirTask toUpdate = dao.get(TASK_UUID);
+		
+		String comment = "Test task comment";
+		toUpdate.setComment(comment);
+		
+		dao.createOrUpdate(toUpdate);
+		
+		FhirTask result = dao.get(TASK_UUID);
+		
+		assertThat(result.getComment(), notNullValue());
+		assertThat(result.getComment(), equalTo(comment));
+	}
+	
+	@Test
 	public void saveTask_shouldUpdateInput() throws Exception {
 		executeDataSet(CONCEPT_DATA_XML);
 		
@@ -236,13 +343,13 @@ public class FhirTaskDaoImplTest extends BaseModuleContextSensitiveTest {
 		
 		toUpdate.setInput(Collections.singleton(input));
 		
-		FhirTask result = dao.get(TASK_UUID);
+		FhirTask updatedInput = dao.createOrUpdate(toUpdate);
 		
-		assertThat(result.getInput(), notNullValue());
-		assertThat(result.getInput(), not(empty()));
+		assertThat(updatedInput.getInput(), notNullValue());
+		assertThat(updatedInput.getInput(), not(empty()));
 		
-		assertThat(result.getInput(), hasItem(hasProperty("type", hasProperty("uuid", equalTo(CONCEPT_UUID)))));
-		assertThat(result.getInput(), hasItem(hasProperty("valueNumeric", equalTo(someNumericVal))));
+		assertThat(updatedInput.getInput(), hasItem(hasProperty("type", hasProperty("uuid", equalTo(CONCEPT_UUID)))));
+		assertThat(updatedInput.getInput(), hasItem(hasProperty("valueNumeric", equalTo(someNumericVal))));
 	}
 	
 	@Test
@@ -254,6 +361,8 @@ public class FhirTaskDaoImplTest extends BaseModuleContextSensitiveTest {
 		cd.setSessionFactory(sessionFactory);
 		
 		FhirTask toUpdate = dao.get(TASK_UUID);
+		
+		assertThat(toUpdate, notNullValue());
 		
 		FhirReference outputReference = new FhirReference();
 		outputReference.setType(FhirConstants.DIAGNOSTIC_REPORT);
@@ -274,14 +383,27 @@ public class FhirTaskDaoImplTest extends BaseModuleContextSensitiveTest {
 		
 		toUpdate.setOutput(Collections.singleton(output));
 		
-		FhirTask result = dao.get(TASK_UUID);
+		FhirTask updatedOutput = dao.createOrUpdate(toUpdate);
 		
-		assertThat(result.getOutput(), notNullValue());
-		assertThat(result.getOutput(), not(empty()));
+		assertThat(updatedOutput.getOutput(), notNullValue());
+		assertThat(updatedOutput.getOutput(), not(empty()));
 		
-		assertThat(result.getOutput(), hasItem(hasProperty("type", hasProperty("uuid", equalTo(CONCEPT_UUID)))));
-		assertThat(result.getOutput(),
+		assertThat(updatedOutput.getOutput(), hasItem(hasProperty("type", hasProperty("uuid", equalTo(CONCEPT_UUID)))));
+		assertThat(updatedOutput.getOutput(),
 		    hasItem(hasProperty("valueReference", hasProperty("reference", equalTo(DIAGNOSTIC_REPORT_UUID)))));
+	}
+	
+	@Test
+	public void searchForTasks_shouldReturnAllTasksForEmptyStatus() {
+		TokenAndListParam status = new TokenAndListParam()
+		        .addAnd(new TokenOrListParam().add(FhirConstants.TASK_STATUS_VALUE_SET_URI, ""));
+		
+		SearchParameterMap theParams = new SearchParameterMap().addParameter(FhirConstants.STATUS_SEARCH_HANDLER, status);
+		
+		List<FhirTask> results = dao.getSearchResults(theParams);
+		
+		assertThat(results, notNullValue());
+		assertThat(results, not(empty()));
 	}
 	
 	@Test
@@ -301,6 +423,56 @@ public class FhirTaskDaoImplTest extends BaseModuleContextSensitiveTest {
 		
 		assertThat(result.getBasedOnReferences(), notNullValue());
 		assertThat(result.getBasedOnReferences().size(), greaterThan(0));
+	}
+	
+	@Test
+	public void saveTask_shouldUpdateFocusReference() {
+		//given
+		FhirTask toUpdate = dao.get(TASK_UUID);
+		
+		FhirReference focusReference = new FhirReference();
+		focusReference.setType(FhirConstants.OBSERVATION);
+		focusReference.setReference(OBSERVATION_UUID);
+		focusReference.setName("TEMP");
+		
+		toUpdate.setFocusReference(focusReference);
+		
+		//when
+		dao.createOrUpdate(toUpdate);
+		
+		//then
+		FhirTask result = dao.get(TASK_UUID);
+		
+		assertThat(result.getFocusReference(), notNullValue());
+		assertThat(result.getFocusReference().getId(), notNullValue());
+		assertThat(result.getFocusReference().getType(), equalTo(FhirConstants.OBSERVATION));
+		assertThat(result.getFocusReference().getReference(), equalTo(OBSERVATION_UUID));
+	}
+	
+	@Test
+	public void searchForTasks_shouldReturnTasksByFocusReference() {
+		//given
+		FhirTask toUpdate = dao.get(TASK_UUID);
+		
+		FhirReference focusRef = new FhirReference();
+		focusRef.setReference(FhirConstants.OBSERVATION + "/" + FOCUS_OBSERVATION_UUID);
+		focusRef.setName("TEMP");
+		toUpdate.setFocusReference(focusRef);
+		dao.createOrUpdate(toUpdate);
+		
+		ReferenceAndListParam focusParam = new ReferenceAndListParam().addAnd(
+		    new ReferenceOrListParam().add(new ReferenceParam(FhirConstants.OBSERVATION, null, FOCUS_OBSERVATION_UUID)));
+		
+		SearchParameterMap searchParams = new SearchParameterMap().addParameter(FhirConstants.FOCUS_REFERENCE_SEARCH_HANDLER,
+		    focusParam);
+		
+		//when
+		List<FhirTask> results = dao.getSearchResults(searchParams);
+		
+		//then
+		assertThat(results, notNullValue());
+		assertThat(results, hasSize(1));
+		assertThat(results, hasItem(hasProperty("uuid", equalTo(TASK_UUID))));
 	}
 	
 }

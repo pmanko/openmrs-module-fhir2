@@ -10,6 +10,7 @@
 package org.openmrs.module.fhir2.api.util;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -18,7 +19,9 @@ import java.util.stream.Collectors;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
-import org.hl7.fhir.r4.model.Encounter;
+import org.hl7.fhir.r4.model.CodeableConcept;
+import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.Reference;
 import org.openmrs.Concept;
@@ -29,10 +32,12 @@ import org.openmrs.module.fhir2.FhirConstants;
 @Slf4j
 public class FhirUtils {
 	
-	public enum OpenmrsEncounterType {
-		ENCOUNTER,
-		VISIT,
-		AMBIGUOUS
+	private FhirUtils() {
+	}
+	
+	public enum OpenmrsConditionType {
+		CONDITION,
+		DIAGNOSIS
 	}
 	
 	// see https://www.hl7.org/fhir/references.html#literal
@@ -116,25 +121,47 @@ public class FhirUtils {
 		return outcome;
 	}
 	
-	public static Optional<OpenmrsEncounterType> getOpenmrsEncounterType(Encounter encounter) {
-		List<OpenmrsEncounterType> openmrsEncounterTypes = encounter.getType().stream().flatMap(
-		    it -> it.getCoding().stream().filter(coding -> FhirConstants.ENCOUNTER_TYPE_SYSTEM_URI.equals(coding.getSystem())
-		            || FhirConstants.VISIT_TYPE_SYSTEM_URI.equals(coding.getSystem())).map(coding -> {
-			            if (FhirConstants.ENCOUNTER_TYPE_SYSTEM_URI.equals(coding.getSystem())) {
-				            return OpenmrsEncounterType.ENCOUNTER;
-			            } else {
-				            return OpenmrsEncounterType.VISIT;
-			            }
-		            }))
-		        .distinct().collect(Collectors.toList());
-		
-		if (openmrsEncounterTypes.isEmpty()) {
-			return Optional.empty();
-		} else if (openmrsEncounterTypes.size() == 1) {
-			return Optional.of(openmrsEncounterTypes.get(0));
-		} else {
-			return Optional.of(OpenmrsEncounterType.AMBIGUOUS);
+	/*
+	 * Determines the condition type based on the given category:
+	 * 1. "encounter-diagnosis" → Diagnosis
+	 * 2. "problem-list-item" → Condition
+	 * 3. Any other category → returns empty
+	 *
+	 * Special case:
+	 * - If category is empty, returns Condition.
+	 *
+	 * @param condition The condition object to evaluate.
+	 * @return The condition type: "Diagnosis", "Condition", or empty.
+	 */
+	public static Optional<OpenmrsConditionType> getOpenmrsConditionType(Condition condition) {
+		if (!condition.hasCategory()) {
+			return Optional.of(OpenmrsConditionType.CONDITION);
 		}
+		
+		List<Coding> categoryCodings = condition.getCategory().stream().filter(CodeableConcept::hasCoding)
+		        .flatMap(category -> category.getCoding().stream()).collect(Collectors.toList());
+		
+		if (categoryCodings.isEmpty()) {
+			return Optional.of(OpenmrsConditionType.CONDITION);
+		}
+		
+		List<Coding> hl7Codings = categoryCodings.stream()
+		        .filter(coding -> FhirConstants.CONDITION_CATEGORY_SYSTEM_URI.equals(coding.getSystem()))
+		        .collect(Collectors.toList());
+		
+		if (hl7Codings.isEmpty()) {
+			return Optional.empty();
+		}
+		
+		return hl7Codings.stream().map(Coding::getCode).map(code -> {
+			if (FhirConstants.CONDITION_CATEGORY_CODE_DIAGNOSIS.equals(code)) {
+				return OpenmrsConditionType.DIAGNOSIS;
+			} else if (FhirConstants.CONDITION_CATEGORY_CODE_CONDITION.equals(code)) {
+				return OpenmrsConditionType.CONDITION;
+			}
+			
+			return null;
+		}).filter(Objects::nonNull).findFirst();
 	}
 	
 	/**
@@ -145,7 +172,6 @@ public class FhirUtils {
 	 * @return localization for the given metadata, from message source, in the authenticated locale
 	 */
 	public static String getMetadataTranslation(OpenmrsMetadata metadata) {
-		
 		String className = metadata.getClass().getSimpleName();
 		String uuid = metadata.getUuid();
 		
@@ -159,7 +185,6 @@ public class FhirUtils {
 	}
 	
 	public static String getMetadataTranslation(Concept concept) {
-		
 		String className = concept.getClass().getSimpleName();
 		String uuid = concept.getUuid();
 		
@@ -184,11 +209,12 @@ public class FhirUtils {
 		String code = "ui.i18n." + shortClassName + ".name." + uuid;
 		String localization = null;
 		try {
-			localization = Context.getMessageSourceService().getMessage(code);
+			localization = Context.getMessageSourceService().getMessage(code, null, Context.getLocale());
 		}
 		catch (Exception e) {
 			log.info("Caught exception while attempting to localize code [{}]", code, e);
 		}
+		
 		if (localization == null || localization.equals(code)) {
 			return null;
 		} else {

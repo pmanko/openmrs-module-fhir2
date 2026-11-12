@@ -44,7 +44,9 @@ import org.openmrs.api.context.UserContext;
 import org.openmrs.api.db.ContextDAO;
 import org.openmrs.module.fhir2.FhirConstants;
 import org.openmrs.module.fhir2.api.impl.FhirGlobalPropertyServiceImpl;
+import org.openmrs.module.fhir2.api.util.ProfileRoutingContext;
 import org.openmrs.module.fhir2.web.servlet.FhirRestServlet;
+import org.openmrs.module.fhir2.web.util.ProfileRoutingInterceptor;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -52,7 +54,6 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockServletConfig;
 import org.springframework.mock.web.MockServletContext;
-import org.springframework.transaction.annotation.Transactional;
 
 public abstract class BaseFhirResourceProviderWebTest<T extends IResourceProvider, U extends IBaseResource> {
 	
@@ -61,6 +62,8 @@ public abstract class BaseFhirResourceProviderWebTest<T extends IResourceProvide
 	private IParser parser;
 	
 	private LoggingInterceptor interceptor;
+	
+	private ProfileRoutingInterceptor profileRoutingInterceptor;
 	
 	private FhirRestServlet servlet;
 	
@@ -89,6 +92,9 @@ public abstract class BaseFhirResourceProviderWebTest<T extends IResourceProvide
 		interceptor = new LoggingInterceptor();
 		interceptor.setLoggerName("org.openmrs.module.fhir2.accessLog");
 		
+		profileRoutingInterceptor = new ProfileRoutingInterceptor();
+		profileRoutingInterceptor.setProfileRoutingContext(new ProfileRoutingContext());
+		
 		MockServletContext servletContext = new MockServletContext();
 		servletConfig = new MockServletConfig(servletContext, getServletName());
 		
@@ -115,18 +121,23 @@ public abstract class BaseFhirResourceProviderWebTest<T extends IResourceProvide
 		servlet = getRestfulServer();
 		servlet.setFhirContext(getFhirContext());
 		servlet.setLoggingInterceptor(interceptor);
+		servlet.setProfileRoutingInterceptor(profileRoutingInterceptor);
 		servlet.setGlobalPropertyService(new FhirGlobalPropertyServiceImpl() {
 			
 			@Override
-			@Transactional(readOnly = true)
-			public String getGlobalProperty(String property) throws APIException {
+			public String getGlobalProperty(String property, String defaultValue) {
+				return defaultValue;
+			}
+			
+			@Override
+			public int getGlobalPropertyAsInteger(String property, int defaultValue) throws APIException {
 				switch (property) {
 					case FhirConstants.OPENMRS_FHIR_DEFAULT_PAGE_SIZE:
-						return "10";
+						return 10;
 					case FhirConstants.OPENMRS_FHIR_MAXIMUM_PAGE_SIZE:
-						return "100";
+						return 100;
 				}
-				return null;
+				return -1;
 			}
 		});
 		

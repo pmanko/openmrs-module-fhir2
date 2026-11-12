@@ -11,12 +11,24 @@ package org.openmrs.module.fhir2;
 
 import org.springframework.beans.factory.annotation.Value;
 
-public class FhirConstants {
+public final class FhirConstants {
 	
 	private FhirConstants() {
 	}
 	
 	public static final String FHIR2_MODULE_ID = "fhir2";
+	
+	/**
+	 * The HAPI interceptor order this module uses for its own interceptors, so that they dispatch ahead
+	 * of anything at {@code Interceptor.DEFAULT_ORDER} however late this module registers them. Beans
+	 * contributed with {@code org.openmrs.module.fhir2.api.annotations.FhirInterceptor} are held at or
+	 * above the default order, but code that registers an interceptor on the servlet directly can still
+	 * declare a lower order and run first.
+	 * <p>
+	 * Deliberately a small magnitude rather than {@code Integer.MIN_VALUE}: HAPI compares two orders
+	 * with {@code a - b}, which overflows and inverts the comparison near the extremes of int.
+	 */
+	public static final int BUILT_IN_INTERCEPTOR_ORDER = -1000;
 	
 	public static final String OPENMRS_FHIR_SERVER_NAME = "OpenMRS FHIR Server";
 	
@@ -32,6 +44,8 @@ public class FhirConstants {
 	public static final String FHIR_TERMINOLOGY_PARTICIPATION_TYPE = HL7_FHIR_CODE_SYSTEM_PREFIX + "v3-ParticipationType";
 	
 	public static final String DIAGNOSTIC_REPORT_SERVICE_SYSTEM_URI = HL7_FHIR_CODE_SYSTEM_PREFIX + "/v2-0074";
+	
+	public static final String IDENTIFIER_TYPE_SYSTEM_URI = HL7_FHIR_CODE_SYSTEM_PREFIX + "/v2-0203";
 	
 	public static final String INTERPRETATION_SYSTEM_URI = HL7_FHIR_CODE_SYSTEM_PREFIX + "/v3-ObservationInterpretation";
 	
@@ -80,6 +94,8 @@ public class FhirConstants {
 	
 	public static final String VISIT_TYPE_SYSTEM_URI = OPENMRS_CODE_SYSTEM_PREFIX + "/visit-type";
 	
+	public static final String OPENMRS_FHIR_EXT_IMMUNIZATION_NEXT_DOSE_DATE = "http://hl7.eu/fhir/StructureDefinition/immunization-nextDoseDate";
+	
 	public static final String OPENMRS_FHIR_EXT_PREFIX = OPENMRS_FHIR_PREFIX + "/ext";
 	
 	public static final String OPENMRS_FHIR_EXT_OBS_LOCATION_VALUE = OPENMRS_FHIR_EXT_PREFIX + "/obs-location-value";
@@ -98,6 +114,12 @@ public class FhirConstants {
 	
 	public static final String OPENMRS_FHIR_EXT_USER_IDENTIFIER = OPENMRS_FHIR_EXT_PREFIX + "/user/identifier";
 	
+	public static final String OPENMRS_FHIR_EXT_PERSON_ATTRIBUTE = OPENMRS_FHIR_EXT_PREFIX + "/person-attribute";
+	
+	public static final String OPENMRS_FHIR_EXT_PERSON_ATTRIBUTE_TYPE = OPENMRS_FHIR_EXT_PREFIX + "/person-attribute-type";
+	
+	public static final String OPENMRS_FHIR_EXT_PERSON_ATTRIBUTE_VALUE = OPENMRS_FHIR_EXT_PREFIX + "/person-attribute-value";
+	
 	public static final String OPENMRS_FHIR_EXT_PROVIDER_IDENTIFIER = OPENMRS_FHIR_EXT_PREFIX + "/provider/identifier";
 	
 	public static final String OPENMRS_FHIR_EXT_LOCATION_TAG = OPENMRS_FHIR_EXT_PREFIX + "/location-tag";
@@ -111,6 +133,25 @@ public class FhirConstants {
 	
 	public static final String OPENMRS_FHIR_EXT_OBSERVATION_REFERENCE_RANGE = OPENMRS_FHIR_EXT_PREFIX
 	        + "/obs/reference-range";
+	
+	public static final String OPENMRS_FHIR_EXT_RECORDED = OPENMRS_FHIR_EXT_PREFIX + "/medicationdispense/recorded";
+	
+	public static final String OPENMRS_FHIR_EXT_MEDICATION_REQUEST_FULFILLER_STATUS = OPENMRS_FHIR_EXT_PREFIX
+	        + "/medicationrequest/fulfillerstatus";
+	
+	public static final String OPENMRS_FHIR_EXT_DIAGNOSIS_RANK = OPENMRS_FHIR_EXT_PREFIX + "/diagnosis-rank";
+	
+	/**
+	 * The diagnosis rank extension URL emitted by releases before
+	 * {@link #OPENMRS_FHIR_EXT_DIAGNOSIS_RANK} replaced it. Still accepted on input so that clients
+	 * round-tripping an older {@code Condition} keep their rank.
+	 *
+	 * @deprecated use {@link #OPENMRS_FHIR_EXT_DIAGNOSIS_RANK}
+	 */
+	@Deprecated
+	public static final String DIAGNOSIS_RANK_EXTENSION_URI = "http://fhir.openmrs.org/R4/StructureDefinition/diagnosis-rank";
+	
+	public static final String OPENMRS_FHIR_STRUCTURE_DEFINITION_PREFIX = OPENMRS_FHIR_PREFIX + "/StructureDefinition";
 	
 	public static final String OPENMRS_FHIR_DEFAULT_PAGE_SIZE = "fhir2.paging.default";
 	
@@ -131,6 +172,8 @@ public class FhirConstants {
 	public static final String LOCATION = "Location";
 	
 	public static final String MEDICATION = "Medication";
+	
+	public static final String GROUP = "Group";
 	
 	public static final String MEDICATION_DISPENSE = "MedicationDispense";
 	
@@ -154,6 +197,18 @@ public class FhirConstants {
 	
 	public static final String TASK = "Task";
 	
+	/*
+	 * Privileges for the module-owned Task table, declared in config.xml. Core defines no Task
+	 * privileges of its own.
+	 */
+	public static final String GET_TASKS_PRIVILEGE = "Get FHIR Tasks";
+	
+	public static final String ADD_TASKS_PRIVILEGE = "Add FHIR Tasks";
+	
+	public static final String EDIT_TASKS_PRIVILEGE = "Edit FHIR Tasks";
+	
+	public static final String DELETE_TASKS_PRIVILEGE = "Delete FHIR Tasks";
+	
 	public static final String DIAGNOSTIC_REPORT_CATEGORY_LAB = "LAB";
 	
 	public static final String VALUESET = "ValueSet";
@@ -170,6 +225,8 @@ public class FhirConstants {
 	
 	public static final String ADMINISTERING_ENCOUNTER_ROLE_PROPERTY = "fhir2.administeringEncounterRoleUuid";
 	
+	public static final String SUPPORTED_LOCATION_HIERARCHY_SEARCH_DEPTH = "fhir.supportedLocationHierarchySearchDepth";
+	
 	public static final String GLOBAL_PROPERTY_MILD = "allergy.concept.severity.mild";
 	
 	public static final String GLOBAL_PROPERTY_SEVERE = "allergy.concept.severity.severe";
@@ -177,6 +234,8 @@ public class FhirConstants {
 	public static final String GLOBAL_PROPERTY_MODERATE = "allergy.concept.severity.moderate";
 	
 	public static final String GLOBAL_PROPERTY_OTHER = "allergy.concept.severity.other";
+	
+	public static final String GLOBAL_PROPERTY_DEFAULT_CONCEPT_MAP_TYPE = "concept.defaultConceptMapType";
 	
 	public static final String GLOBAL_PROPERTY_URI_PREFIX = "fhir2.uriPrefix";
 	
@@ -212,11 +271,21 @@ public class FhirConstants {
 	
 	public static final String NAME_SEARCH_HANDLER = "name.search.handler";
 	
+	public static final String QUERY_SEARCH_HANDLER = "query.search.handler";
+	
 	public static final String NAME_PROPERTY = "name.property";
 	
 	public static final String GIVEN_PROPERTY = "given.property";
 	
 	public static final String FAMILY_PROPERTY = "family.property";
+	
+	public static final String GENDER_PROPERTY = "gender";
+	
+	public static final String BIRTHDATE_PROPERTY = "birthdate";
+	
+	public static final String DEATHDATE_PROPERTY = "deathDate";
+	
+	public static final String DECEASED_PROPERTY = "dead";
 	
 	public static final String CITY_PROPERTY = "city.property";
 	
@@ -260,9 +329,17 @@ public class FhirConstants {
 	
 	public static final String STATUS_SEARCH_HANDLER = "status.search.handler";
 	
+	public static final String TASK_CODE_SEARCH_HANDLER = "task.code.search.handler";
+	
+	public static final String FULFILLER_STATUS_SEARCH_HANDLER = "fulfillerStatus.search.handler";
+	
 	public static final String BASED_ON_REFERENCE_SEARCH_HANDLER = "based.on.reference.search.handler";
 	
 	public static final String OWNER_REFERENCE_SEARCH_HANDLER = "owner.reference.search.handler";
+	
+	public static final String FOR_REFERENCE_SEARCH_HANDLER = "for.reference.search.handler";
+	
+	public static final String FOCUS_REFERENCE_SEARCH_HANDLER = "focus.reference.search.handler";
 	
 	public static final String RESULT_SEARCH_HANDLER = "result.search.handler";
 	
@@ -276,6 +353,8 @@ public class FhirConstants {
 	
 	public static final String SP_LAST_UPDATED = "_lastUpdated";
 	
+	public static final String SP_FULFILLER_STATUS = "fulfillerStatus";
+	
 	public static final String SERVLET_PATH_R4 = "/ms/fhir2Servlet";
 	
 	public static final String SERVLET_PATH_R3 = "/ms/fhir2R3Servlet";
@@ -283,6 +362,8 @@ public class FhirConstants {
 	public static final String INCLUDE_SEARCH_HANDLER = "_include.search.handler";
 	
 	public static final String INCLUDE_PART_OF_PARAM = "partof";
+	
+	public static final String INCLUDE_ENCOUNTER_PART_OF_PARAM = "part-of";
 	
 	public static final String INCLUDE_PARTICIPANT_PARAM = "participant";
 	
@@ -314,8 +395,6 @@ public class FhirConstants {
 	
 	public static final String INCLUDE_OWNER_PARAM = "owner";
 	
-	public static final String INCLUDE_PRESCRIPTION_PARAMETER = "prescription";
-	
 	public static final String REVERSE_INCLUDE_SEARCH_HANDLER = "_revinclude.search.handler";
 	
 	public static final String MAX_SEARCH_HANDLER = "max.search.handler";
@@ -337,4 +416,25 @@ public class FhirConstants {
 	public static final String RX_NORM_SYSTEM_URI = "http://www.nlm.nih.gov/research/umls/rxnorm";
 	
 	public static final String UCUM_SYSTEM_URI = "http://unitsofmeasure.org";
+	
+	public static final String EXACT_TOTAL_SEARCH_PARAMETER = "_exactTotal";
+	
+	public static final String COUNT_QUERY_CACHE = "countQueryCache";
+	
+	public static final String INCLUDE_MEMBER_PARAM = "member";
+	
+	public static final String CONDITION_CATEGORY_SYSTEM_URI = HL7_FHIR_CODE_SYSTEM_PREFIX + "/condition-category";
+	
+	public static final String CONDITION_CATEGORY_CODE_CONDITION = "problem-list-item";
+	
+	public static final String CONDITION_CATEGORY_CODE_DIAGNOSIS = "encounter-diagnosis";
+	
+	public static final String CONDITION_CLINICAL_SYSTEM_URI = HL7_FHIR_CODE_SYSTEM_PREFIX + "/condition-clinical";
+	
+	public static final String CONDITION_VER_STATUS_SYSTEM_URI = HL7_FHIR_CODE_SYSTEM_PREFIX + "/condition-ver-status";
+	
+	public static final String USER_DATA_KEY_CREATE_IF_NOT_EXISTS = "fhir2_module_create_if_not_exists";
+	
+	public static final String USER_DATA_KEY_OUTCOME_CREATED = "fhir2_module_outcome_created";
+	
 }

@@ -10,6 +10,7 @@
 package org.openmrs.module.fhir2.providers.r4;
 
 import static lombok.AccessLevel.PACKAGE;
+import static lombok.AccessLevel.PROTECTED;
 
 import javax.annotation.Nonnull;
 
@@ -30,6 +31,7 @@ import ca.uhn.fhir.rest.param.TokenAndListParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.collections.CollectionUtils;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -47,10 +49,10 @@ import org.springframework.stereotype.Component;
 
 @Component("serviceRequestFhirR4ResourceProvider")
 @R4Provider
-@Setter(PACKAGE)
 public class ServiceRequestFhirResourceProvider implements IResourceProvider {
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PACKAGE, onMethod_ = @Autowired)
 	private FhirServiceRequestService serviceRequestService;
 	
 	@Override
@@ -109,8 +111,8 @@ public class ServiceRequestFhirResourceProvider implements IResourceProvider {
 	        @OptionalParam(name = ServiceRequest.SP_RES_ID) TokenAndListParam uuid,
 	        @OptionalParam(name = "_lastUpdated") DateRangeParam lastUpdated,
 	        @IncludeParam(allow = { "ServiceRequest:" + ServiceRequest.SP_PATIENT,
-	                "ServiceRequest:" + ServiceRequest.SP_REQUESTER,
-	                "ServiceRequest:" + ServiceRequest.SP_ENCOUNTER }) HashSet<Include> includes) {
+	                "ServiceRequest:" + ServiceRequest.SP_REQUESTER, "ServiceRequest:" + ServiceRequest.SP_ENCOUNTER,
+	                "Encounter:" + Encounter.SP_PART_OF }) HashSet<Include> includes) {
 		if (patientReference == null) {
 			patientReference = subjectReference;
 		}

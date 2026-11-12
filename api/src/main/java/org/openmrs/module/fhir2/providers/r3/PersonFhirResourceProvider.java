@@ -10,6 +10,7 @@
 package org.openmrs.module.fhir2.providers.r3;
 
 import static lombok.AccessLevel.PACKAGE;
+import static lombok.AccessLevel.PROTECTED;
 
 import javax.annotation.Nonnull;
 
@@ -35,9 +36,10 @@ import ca.uhn.fhir.rest.param.TokenAndListParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.collections.CollectionUtils;
-import org.hl7.fhir.convertors.conv30_40.Person30_40;
+import org.hl7.fhir.convertors.factory.VersionConvertorFactory_30_40;
 import org.hl7.fhir.dstu3.model.IdType;
 import org.hl7.fhir.dstu3.model.OperationOutcome;
 import org.hl7.fhir.dstu3.model.Person;
@@ -45,16 +47,17 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.openmrs.module.fhir2.api.FhirPersonService;
 import org.openmrs.module.fhir2.api.annotations.R3Provider;
 import org.openmrs.module.fhir2.api.search.SearchQueryBundleProviderR3Wrapper;
+import org.openmrs.module.fhir2.api.search.param.PersonSearchParams;
 import org.openmrs.module.fhir2.providers.util.FhirProviderUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component("personFhirR3ResourceProvider")
 @R3Provider
-@Setter(PACKAGE)
 public class PersonFhirResourceProvider implements IResourceProvider {
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PACKAGE, onMethod_ = @Autowired)
 	private FhirPersonService personService;
 	
 	@Override
@@ -70,13 +73,13 @@ public class PersonFhirResourceProvider implements IResourceProvider {
 			throw new ResourceNotFoundException("Could not find person with Id " + id.getIdPart());
 		}
 		
-		return Person30_40.convertPerson(person);
+		return (Person) VersionConvertorFactory_30_40.convertResource(person);
 	}
 	
 	@Create
 	public MethodOutcome createPerson(@ResourceParam Person person) {
-		return FhirProviderUtils
-		        .buildCreate(Person30_40.convertPerson(personService.create(Person30_40.convertPerson(person))));
+		return FhirProviderUtils.buildCreate(VersionConvertorFactory_30_40.convertResource(
+		    personService.create((org.hl7.fhir.r4.model.Person) VersionConvertorFactory_30_40.convertResource(person))));
 	}
 	
 	@Update
@@ -88,8 +91,9 @@ public class PersonFhirResourceProvider implements IResourceProvider {
 		
 		person.setId(id.getIdPart());
 		
-		return FhirProviderUtils.buildUpdate(
-		    Person30_40.convertPerson(personService.update(id.getIdPart(), Person30_40.convertPerson(person))));
+		return FhirProviderUtils
+		        .buildUpdate(VersionConvertorFactory_30_40.convertResource(personService.update(id.getIdPart(),
+		            (org.hl7.fhir.r4.model.Person) VersionConvertorFactory_30_40.convertResource(person))));
 	}
 	
 	@Delete
@@ -115,8 +119,9 @@ public class PersonFhirResourceProvider implements IResourceProvider {
 			includes = null;
 		}
 		
-		return new SearchQueryBundleProviderR3Wrapper(personService.searchForPeople(name, gender, birthDate, city, state,
-		    postalCode, country, id, lastUpdated, sort, includes));
+		return new SearchQueryBundleProviderR3Wrapper(personService.searchForPeople(new PersonSearchParams(name, gender,
+		        birthDate, city, state, postalCode, country, id, lastUpdated, sort, includes)));
+		
 	}
 	
 }

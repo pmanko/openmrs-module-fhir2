@@ -10,6 +10,7 @@
 package org.openmrs.module.fhir2.providers.r3;
 
 import static lombok.AccessLevel.PACKAGE;
+import static lombok.AccessLevel.PROTECTED;
 
 import javax.annotation.Nonnull;
 
@@ -39,9 +40,10 @@ import ca.uhn.fhir.rest.param.StringAndListParam;
 import ca.uhn.fhir.rest.param.TokenAndListParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.collections.CollectionUtils;
-import org.hl7.fhir.convertors.conv30_40.Observation30_40;
+import org.hl7.fhir.convertors.factory.VersionConvertorFactory_30_40;
 import org.hl7.fhir.dstu3.model.DiagnosticReport;
 import org.hl7.fhir.dstu3.model.Encounter;
 import org.hl7.fhir.dstu3.model.IdType;
@@ -59,10 +61,10 @@ import org.springframework.stereotype.Component;
 
 @Component("observationFhirR3ResourceProvider")
 @R3Provider
-@Setter(PACKAGE)
 public class ObservationFhirResourceProvider implements IResourceProvider {
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PACKAGE, onMethod_ = @Autowired)
 	private FhirObservationService observationService;
 	
 	@Override
@@ -78,13 +80,13 @@ public class ObservationFhirResourceProvider implements IResourceProvider {
 			throw new ResourceNotFoundException("Could not find observation with Id " + id.getIdPart());
 		}
 		
-		return Observation30_40.convertObservation(observation);
+		return (Observation) VersionConvertorFactory_30_40.convertResource(observation);
 	}
 	
 	@Create
 	public MethodOutcome createObservationResource(@ResourceParam Observation observation) {
-		return FhirProviderUtils.buildCreate(Observation30_40
-		        .convertObservation(observationService.create(Observation30_40.convertObservation(observation))));
+		return FhirProviderUtils.buildCreate(VersionConvertorFactory_30_40.convertResource(observationService
+		        .create((org.hl7.fhir.r4.model.Observation) VersionConvertorFactory_30_40.convertResource(observation))));
 	}
 	
 	@Delete

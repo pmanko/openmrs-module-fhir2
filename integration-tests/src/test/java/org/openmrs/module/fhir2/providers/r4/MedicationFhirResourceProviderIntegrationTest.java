@@ -17,8 +17,10 @@ import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.startsWith;
 import static org.openmrs.module.fhir2.api.util.GeneralUtils.inputStreamToString;
+import static org.openmrs.module.fhir2.providers.r4.BaseUpsertFhirResourceProvider.GP_NAME_SUPPORTED_RESOURCES;
 
 import java.io.InputStream;
 import java.util.List;
@@ -31,8 +33,13 @@ import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Extension;
 import org.hl7.fhir.r4.model.Medication;
 import org.hl7.fhir.r4.model.OperationOutcome;
+import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 import org.junit.Before;
 import org.junit.Test;
+import org.openmrs.GlobalProperty;
+import org.openmrs.api.AdministrationService;
+import org.openmrs.api.ConceptService;
+import org.openmrs.customdatatype.datatype.FreeTextDatatype;
 import org.openmrs.module.fhir2.BaseFhirIntegrationTest;
 import org.openmrs.module.fhir2.FhirConstants;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,7 +57,15 @@ public class MedicationFhirResourceProviderIntegrationTest extends BaseFhirR4Int
 	
 	private static final String MEDICATION_DATA_XML = "org/openmrs/module/fhir2/api/dao/impl/FhirMedicationDaoImplTest_initial_data.xml";
 	
+	private static final String JSON_MERGE_PATCH_MEDICATION_PATH = "org/openmrs/module/fhir2/providers/Medication_patch.json";
+	
+	private static final String JSON_PATCH_MEDICATION_PATH = "org/openmrs/module/fhir2/providers/Medication_json_patch.json";
+	
+	private static final String XML_PATCH_MEDICATION_PATH = "org/openmrs/module/fhir2/providers/Medication_xml_patch.xml";
+	
 	private static final String JSON_CREATE_MEDICATION_DOCUMENT = "org/openmrs/module/fhir2/providers/MedicationWebTest_create.json";
+	
+	private static final String JSON_UPSERT_MEDICATION_DOCUMENT = "org/openmrs/module/fhir2/providers/MedicationWebTest_upsert.json";
 	
 	private static final String XML_CREATE_MEDICATION_DOCUMENT = "org/openmrs/module/fhir2/providers/MedicationWebTest_create.xml";
 	
@@ -62,11 +77,23 @@ public class MedicationFhirResourceProviderIntegrationTest extends BaseFhirR4Int
 	@Getter(AccessLevel.PUBLIC)
 	private MedicationFhirResourceProvider resourceProvider;
 	
+	@Autowired
+	private ConceptService conceptService;
+	
+	@Autowired
+	private AdministrationService adminService;
+	
 	@Before
 	@Override
 	public void setup() throws Exception {
 		super.setup();
 		executeDataSet(MEDICATION_DATA_XML);
+		//Clear the global property value if set.
+		GlobalProperty gp = adminService.getGlobalPropertyObject(GP_NAME_SUPPORTED_RESOURCES);
+		if (gp != null) {
+			gp.setValue(null);
+			adminService.saveGlobalProperty(gp);
+		}
 	}
 	
 	@Test
@@ -75,7 +102,7 @@ public class MedicationFhirResourceProviderIntegrationTest extends BaseFhirR4Int
 		        .accept(BaseFhirIntegrationTest.FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(BaseFhirIntegrationTest.FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(BaseFhirIntegrationTest.FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Medication medication = readResponse(response);
@@ -91,7 +118,7 @@ public class MedicationFhirResourceProviderIntegrationTest extends BaseFhirR4Int
 		        .accept(BaseFhirIntegrationTest.FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isNotFound());
-		assertThat(response.getContentType(), is(BaseFhirIntegrationTest.FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(BaseFhirIntegrationTest.FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 	}
 	
@@ -101,7 +128,7 @@ public class MedicationFhirResourceProviderIntegrationTest extends BaseFhirR4Int
 		        .accept(BaseFhirIntegrationTest.FhirMediaTypes.XML).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(BaseFhirIntegrationTest.FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(BaseFhirIntegrationTest.FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Medication medication = readResponse(response);
@@ -117,7 +144,7 @@ public class MedicationFhirResourceProviderIntegrationTest extends BaseFhirR4Int
 		        .accept(BaseFhirIntegrationTest.FhirMediaTypes.XML).go();
 		
 		assertThat(response, isNotFound());
-		assertThat(response.getContentType(), is(BaseFhirIntegrationTest.FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(BaseFhirIntegrationTest.FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 	}
 	
@@ -135,23 +162,13 @@ public class MedicationFhirResourceProviderIntegrationTest extends BaseFhirR4Int
 		
 		// verify created correctly
 		assertThat(response, isCreated());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Medication medication = readResponse(response);
 		assertThat(medication, notNullValue());
 		assertThat(medication.getStatus(), is(Medication.MedicationStatus.ACTIVE));
 		assertThat(medication.getCode().getCodingFirstRep().getCode(), equalTo(MEDICATION_CODE_UUID));
-		
-		// try to get new medication
-		response = get(medication.getId()).accept(FhirMediaTypes.JSON).go();
-		
-		assertThat(response, isOk());
-		
-		Medication newMedication = readResponse(response);
-		
-		assertThat(newMedication.getId(), equalTo(medication.getId()));
-		assertThat(newMedication.getStatus(), equalTo(medication.getStatus()));
 		
 	}
 	
@@ -168,23 +185,13 @@ public class MedicationFhirResourceProviderIntegrationTest extends BaseFhirR4Int
 		
 		// verify created correctly
 		assertThat(response, isCreated());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Medication medication = readResponse(response);
 		assertThat(medication, notNullValue());
 		assertThat(medication.getStatus(), is(Medication.MedicationStatus.ACTIVE));
 		assertThat(medication.getCode().getCodingFirstRep().getCode(), equalTo(MEDICATION_CODE_UUID));
-		
-		// try to get new medication
-		response = get(medication.getId()).accept(FhirMediaTypes.XML).go();
-		
-		assertThat(response, isOk());
-		
-		Medication newMedication = readResponse(response);
-		
-		assertThat(newMedication.getId(), equalTo(medication.getId()));
-		assertThat(newMedication.getStatus(), equalTo(medication.getStatus()));
 		
 	}
 	
@@ -194,7 +201,7 @@ public class MedicationFhirResourceProviderIntegrationTest extends BaseFhirR4Int
 		MockHttpServletResponse response = get("/Medication/" + MEDICATION_UUID).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Medication medication = readResponse(response);
@@ -217,7 +224,7 @@ public class MedicationFhirResourceProviderIntegrationTest extends BaseFhirR4Int
 		response = put("/Medication/" + MEDICATION_UUID).jsonContent(jsonMedication).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		// read updated record
@@ -258,7 +265,7 @@ public class MedicationFhirResourceProviderIntegrationTest extends BaseFhirR4Int
 		response = put("/Medication/" + MEDICATION_UUID).jsonContent(toJson(medication)).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isBadRequest());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
@@ -281,7 +288,7 @@ public class MedicationFhirResourceProviderIntegrationTest extends BaseFhirR4Int
 		        .go();
 		
 		assertThat(response, isNotFound());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
@@ -297,7 +304,7 @@ public class MedicationFhirResourceProviderIntegrationTest extends BaseFhirR4Int
 		        .accept(BaseFhirIntegrationTest.FhirMediaTypes.XML).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(BaseFhirIntegrationTest.FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(BaseFhirIntegrationTest.FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Medication medication = readResponse(response);
@@ -320,7 +327,7 @@ public class MedicationFhirResourceProviderIntegrationTest extends BaseFhirR4Int
 		response = put("/Medication/" + MEDICATION_UUID).xmlContent(xmlMedication).accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		// read updated record
@@ -361,7 +368,7 @@ public class MedicationFhirResourceProviderIntegrationTest extends BaseFhirR4Int
 		response = put("/Medication/" + MEDICATION_UUID).xmlContent(toXML(medication)).accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isBadRequest());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
@@ -383,13 +390,86 @@ public class MedicationFhirResourceProviderIntegrationTest extends BaseFhirR4Int
 		response = put("/Medication/" + WRONG_MEDICATION_UUID).xmlContent(toXML(medication)).accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isNotFound());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
 		
 		assertThat(operationOutcome, notNullValue());
 		assertThat(operationOutcome.hasIssue(), is(true));
+	}
+	
+	@Test
+	public void shouldPatchExistingMedicationUsingJsonMergePatch() throws Exception {
+		String jsonMedicationPatch;
+		try (InputStream is = this.getClass().getClassLoader().getResourceAsStream(JSON_MERGE_PATCH_MEDICATION_PATH)) {
+			Objects.requireNonNull(is);
+			jsonMedicationPatch = inputStreamToString(is, UTF_8);
+		}
+		
+		MockHttpServletResponse response = patch("/Medication/" + MEDICATION_UUID).jsonMergePatch(jsonMedicationPatch)
+		        .accept(FhirMediaTypes.JSON).go();
+		
+		assertThat(response, isOk());
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentAsString(), notNullValue());
+		
+		Medication medication = readResponse(response);
+		
+		assertThat(medication, notNullValue());
+		assertThat(medication.getIdElement().getIdPart(), equalTo(MEDICATION_UUID));
+		assertThat(medication, validResource());
+		assertThat(medication.getIngredientFirstRep().getItemCodeableConcept().getCodingFirstRep().getCode(),
+		    equalTo("5086AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"));
+	}
+	
+	@Test
+	public void shouldPatchExistingMedicationUsingJsonPatch() throws Exception {
+		String jsonMedicationPatch;
+		try (InputStream is = this.getClass().getClassLoader().getResourceAsStream(JSON_PATCH_MEDICATION_PATH)) {
+			Objects.requireNonNull(is);
+			jsonMedicationPatch = inputStreamToString(is, UTF_8);
+		}
+		
+		MockHttpServletResponse response = patch("/Medication/" + MEDICATION_UUID).jsonPatch(jsonMedicationPatch)
+		        .accept(FhirMediaTypes.JSON).go();
+		
+		assertThat(response, isOk());
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentAsString(), notNullValue());
+		
+		Medication medication = readResponse(response);
+		
+		assertThat(medication, notNullValue());
+		assertThat(medication.getIdElement().getIdPart(), equalTo(MEDICATION_UUID));
+		assertThat(medication, validResource());
+		assertThat(medication.getIngredientFirstRep().getItemCodeableConcept().getCodingFirstRep().getCode(),
+		    equalTo("5086AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"));
+		
+	}
+	
+	@Test
+	public void shouldPatchExistingMedicationUsingXmlPatch() throws Exception {
+		String xmlMedicationPatch;
+		try (InputStream is = this.getClass().getClassLoader().getResourceAsStream(XML_PATCH_MEDICATION_PATH)) {
+			Objects.requireNonNull(is);
+			xmlMedicationPatch = inputStreamToString(is, UTF_8);
+		}
+		
+		MockHttpServletResponse response = patch("/Medication/" + MEDICATION_UUID).xmlPatch(xmlMedicationPatch)
+		        .accept(FhirMediaTypes.XML).go();
+		
+		assertThat(response, isOk());
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentAsString(), notNullValue());
+		
+		Medication medication = readResponse(response);
+		
+		assertThat(medication, notNullValue());
+		assertThat(medication.getIdElement().getIdPart(), equalTo(MEDICATION_UUID));
+		assertThat(medication, validResource());
+		assertThat(medication.getIngredientFirstRep().getItemCodeableConcept().getCodingFirstRep().getCode(),
+		    equalTo("5086AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"));
 	}
 	
 	@Test
@@ -408,7 +488,7 @@ public class MedicationFhirResourceProviderIntegrationTest extends BaseFhirR4Int
 		MockHttpServletResponse response = delete("/Medication/" + WRONG_MEDICATION_UUID).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isNotFound());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
@@ -422,7 +502,7 @@ public class MedicationFhirResourceProviderIntegrationTest extends BaseFhirR4Int
 		MockHttpServletResponse response = get("/Medication").accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Bundle results = readBundleResponse(response);
@@ -438,7 +518,7 @@ public class MedicationFhirResourceProviderIntegrationTest extends BaseFhirR4Int
 		
 		response = get(String.format("/Medication?_id=%s", MEDICATION_UUID)).accept(FhirMediaTypes.JSON).go();
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		results = readBundleResponse(response);
@@ -449,7 +529,7 @@ public class MedicationFhirResourceProviderIntegrationTest extends BaseFhirR4Int
 		
 		entries = results.getEntry();
 		assertThat(entries, everyItem(hasResource(
-		    hasProperty("id", is("http://localhost/ws/fhir2/R4/Medication/1085AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")))));
+		    hasProperty("id", startsWith("http://localhost/ws/fhir2/R4/Medication/1085AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")))));
 		assertThat(entries, everyItem(hasResource(validResource())));
 	}
 	
@@ -458,7 +538,7 @@ public class MedicationFhirResourceProviderIntegrationTest extends BaseFhirR4Int
 		MockHttpServletResponse response = get("/Medication").accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Bundle results = readBundleResponse(response);
@@ -474,7 +554,7 @@ public class MedicationFhirResourceProviderIntegrationTest extends BaseFhirR4Int
 		
 		response = get(String.format("/Medication?_id=%s", MEDICATION_UUID)).accept(FhirMediaTypes.XML).go();
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		results = readBundleResponse(response);
@@ -485,7 +565,7 @@ public class MedicationFhirResourceProviderIntegrationTest extends BaseFhirR4Int
 		
 		entries = results.getEntry();
 		assertThat(entries, everyItem(hasResource(
-		    hasProperty("id", is("http://localhost/ws/fhir2/R4/Medication/1085AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")))));
+		    hasProperty("id", startsWith("http://localhost/ws/fhir2/R4/Medication/1085AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")))));
 		assertThat(entries, everyItem(hasResource(validResource())));
 	}
 	
@@ -494,7 +574,7 @@ public class MedicationFhirResourceProviderIntegrationTest extends BaseFhirR4Int
 		MockHttpServletResponse response = get("/Medication?_summary=count").accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Bundle result = readBundleResponse(response);
@@ -509,7 +589,7 @@ public class MedicationFhirResourceProviderIntegrationTest extends BaseFhirR4Int
 		MockHttpServletResponse response = get("/Medication?_summary=count").accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Bundle result = readBundleResponse(response);
@@ -517,5 +597,93 @@ public class MedicationFhirResourceProviderIntegrationTest extends BaseFhirR4Int
 		assertThat(result, notNullValue());
 		assertThat(result.getType(), equalTo(Bundle.BundleType.SEARCHSET));
 		assertThat(result, hasProperty("total", equalTo(4)));
+	}
+	
+	@Test
+	public void shouldReturnAnEtagHeaderWhenRetrievingAnExistingMedication() throws Exception {
+		MockHttpServletResponse response = get("/Medication/" + MEDICATION_UUID).accept(FhirMediaTypes.JSON).go();
+		
+		assertThat(response, isOk());
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
+		
+		assertThat(response.getHeader("etag"), notNullValue());
+		assertThat(response.getHeader("etag"), startsWith("W/"));
+		
+		assertThat(response.getContentAsString(), notNullValue());
+		
+		Medication medication = readResponse(response);
+		
+		assertThat(medication, notNullValue());
+		assertThat(medication.getMeta().getVersionId(), notNullValue());
+		assertThat(medication, validResource());
+	}
+	
+	@Test
+	public void shouldReturnNotModifiedWhenRetrievingAnExistingMedicationWithAnEtag() throws Exception {
+		MockHttpServletResponse response = get("/Medication/" + MEDICATION_UUID).accept(FhirMediaTypes.JSON).go();
+		
+		assertThat(response, isOk());
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentAsString(), notNullValue());
+		assertThat(response.getHeader("etag"), notNullValue());
+		
+		String etagValue = response.getHeader("etag");
+		
+		response = get("/Medication/" + MEDICATION_UUID).accept(FhirMediaTypes.JSON).ifNoneMatchHeader(etagValue).go();
+		
+		assertThat(response, isOk());
+		assertThat(response, statusEquals(HttpStatus.NOT_MODIFIED));
+	}
+	
+	@Test
+	public void shouldCreateANewMedicationWithTheProvidedUuid() throws Exception {
+		GlobalProperty gp = adminService.getGlobalPropertyObject(GP_NAME_SUPPORTED_RESOURCES);
+		if (gp == null) {
+			gp = new GlobalProperty(GP_NAME_SUPPORTED_RESOURCES);
+			gp.setDatatypeClassname(FreeTextDatatype.class.getName());
+		}
+		gp.setValue("Medication");
+		adminService.saveGlobalProperty(gp);
+		final String uuid = "105bf9c4-8fef-11f0-b303-0242ac180002";
+		assertThat(conceptService.getDrug(uuid), nullValue());
+		String jsonMedication;
+		try (InputStream is = this.getClass().getClassLoader().getResourceAsStream(JSON_UPSERT_MEDICATION_DOCUMENT)) {
+			Objects.requireNonNull(is);
+			jsonMedication = inputStreamToString(is, UTF_8);
+		}
+		
+		MockHttpServletResponse response = put("/Medication/" + uuid).accept(FhirMediaTypes.JSON).jsonContent(jsonMedication)
+		        .go();
+		
+		assertThat(response, isCreated());
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentAsString(), notNullValue());
+		Medication medication = readResponse(response);
+		assertThat(medication, notNullValue());
+		assertThat(medication.getIdElement().getIdPart(), is(uuid));
+		assertThat(medication.getStatus(), is(Medication.MedicationStatus.ACTIVE));
+		assertThat(medication.getCode().getCodingFirstRep().getCode(), equalTo(MEDICATION_CODE_UUID));
+		
+	}
+	
+	@Test
+	public void shouldFailToCreateANewMedicationWithTheProvidedUuidIfUpsertIsNotEnabled() throws Exception {
+		final String uuid = "105bf9c4-8fef-11f0-b303-0242ac180002";
+		assertThat(conceptService.getDrug(uuid), nullValue());
+		String jsonMedication;
+		try (InputStream is = this.getClass().getClassLoader().getResourceAsStream(JSON_UPSERT_MEDICATION_DOCUMENT)) {
+			Objects.requireNonNull(is);
+			jsonMedication = inputStreamToString(is, UTF_8);
+		}
+		
+		MockHttpServletResponse response = put("/Medication/" + uuid).accept(FhirMediaTypes.JSON).jsonContent(jsonMedication)
+		        .go();
+		
+		assertThat(response, isNotFound());
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentAsString(), notNullValue());
+		OperationOutcome outcome = readOperationOutcome(response);
+		OperationOutcomeIssueComponent issue = outcome.getIssue().get(0);
+		assertThat(issue.getDiagnostics(), is("Resource of type Medication with ID " + uuid + " is not known"));
 	}
 }

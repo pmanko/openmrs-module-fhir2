@@ -51,6 +51,12 @@ public class PractitionerFhirResourceProviderIntegrationTest extends BaseFhirR4I
 	
 	private static final String XML_CREATE_PRACTITIONER_DOCUMENT = "org/openmrs/module/fhir2/providers/PractitionerWebTest_create.xml";
 	
+	private static final String JSON_MERGE_PATCH_PRACTITIONER_PATH = "org/openmrs/module/fhir2/providers/Practitioner_json_merge_patch.json";
+	
+	private static final String JSON_PATCH_PRACTITIONER_PATH = "org/openmrs/module/fhir2/providers/Practitioner_json_patch.json";
+	
+	private static final String XML_PATCH_PRACTITIONER_PATH = "org/openmrs/module/fhir2/providers/Practitioner_xmlpatch.xml";
+	
 	private static final String PRACTITIONER_UUID = "f9badd80-ab76-11e2-9e96-0800200c9a66";
 	
 	private static final String WRONG_PRACTITIONER_UUID = "f8bc0122-21db-4e91-a5d3-92ae01cafe92";
@@ -71,7 +77,7 @@ public class PractitionerFhirResourceProviderIntegrationTest extends BaseFhirR4I
 		MockHttpServletResponse response = get("/Practitioner/" + PRACTITIONER_UUID).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Practitioner practitioner = readResponse(response);
@@ -87,7 +93,7 @@ public class PractitionerFhirResourceProviderIntegrationTest extends BaseFhirR4I
 		MockHttpServletResponse response = get("/Practitioner/" + WRONG_PRACTITIONER_UUID).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isNotFound());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
@@ -101,7 +107,7 @@ public class PractitionerFhirResourceProviderIntegrationTest extends BaseFhirR4I
 		MockHttpServletResponse response = get("/Practitioner/" + PRACTITIONER_UUID).accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Practitioner practitioner = readResponse(response);
@@ -116,7 +122,7 @@ public class PractitionerFhirResourceProviderIntegrationTest extends BaseFhirR4I
 		MockHttpServletResponse response = get("/Practitioner/" + WRONG_PRACTITIONER_UUID).accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isNotFound());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
@@ -141,7 +147,7 @@ public class PractitionerFhirResourceProviderIntegrationTest extends BaseFhirR4I
 		// verify created correctly
 		assertThat(response, isCreated());
 		assertThat(response.getHeader("Location"), containsString("/Practitioner/"));
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Practitioner practitioner = readResponse(response);
@@ -185,7 +191,7 @@ public class PractitionerFhirResourceProviderIntegrationTest extends BaseFhirR4I
 		// verify created correctly
 		assertThat(response, isCreated());
 		assertThat(response.getHeader("Location"), containsString("/Practitioner/"));
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Practitioner practitioner = readResponse(response);
@@ -229,7 +235,7 @@ public class PractitionerFhirResourceProviderIntegrationTest extends BaseFhirR4I
 		        .go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		// read the updated record
@@ -261,7 +267,7 @@ public class PractitionerFhirResourceProviderIntegrationTest extends BaseFhirR4I
 		        .go();
 		
 		assertThat(response, isBadRequest());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
@@ -284,7 +290,7 @@ public class PractitionerFhirResourceProviderIntegrationTest extends BaseFhirR4I
 		        .accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isNotFound());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
@@ -307,7 +313,7 @@ public class PractitionerFhirResourceProviderIntegrationTest extends BaseFhirR4I
 		response = put("/Practitioner/" + PRACTITIONER_UUID).xmlContent(toXML(practitioner)).accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		// read the updated record
@@ -338,7 +344,7 @@ public class PractitionerFhirResourceProviderIntegrationTest extends BaseFhirR4I
 		response = put("/Practitioner/" + PRACTITIONER_UUID).xmlContent(toXML(practitioner)).accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isBadRequest());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
@@ -361,13 +367,85 @@ public class PractitionerFhirResourceProviderIntegrationTest extends BaseFhirR4I
 		        .go();
 		
 		assertThat(response, isNotFound());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
 		
 		assertThat(operationOutcome, notNullValue());
 		assertThat(operationOutcome.hasIssue(), is(true));
+	}
+	
+	@Test
+	public void shouldPatchExistingPractitionerUsingJsonMergePatch() throws Exception {
+		String jsonPractitionerPatch;
+		try (InputStream is = this.getClass().getClassLoader().getResourceAsStream(JSON_MERGE_PATCH_PRACTITIONER_PATH)) {
+			Objects.requireNonNull(is);
+			jsonPractitionerPatch = inputStreamToString(is, UTF_8);
+		}
+		
+		MockHttpServletResponse response = patch("/Practitioner/" + PRACTITIONER_UUID).jsonMergePatch(jsonPractitionerPatch)
+		        .accept(FhirMediaTypes.JSON).go();
+		
+		assertThat(response, isOk());
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentAsString(), notNullValue());
+		
+		Practitioner practitioner = readResponse(response);
+		
+		assertThat(practitioner, notNullValue());
+		assertThat(practitioner.getIdElement().getIdPart(), equalTo(PRACTITIONER_UUID));
+		assertThat(practitioner, validResource());
+		
+		assertThat(practitioner.getGender(), is(Enumerations.AdministrativeGender.FEMALE));
+	}
+	
+	@Test
+	public void shouldPatchExistingPractitionerUsingJsonPatch() throws Exception {
+		String jsonPractitionerPatch;
+		try (InputStream is = this.getClass().getClassLoader().getResourceAsStream(JSON_PATCH_PRACTITIONER_PATH)) {
+			Objects.requireNonNull(is);
+			jsonPractitionerPatch = inputStreamToString(is, UTF_8);
+		}
+		
+		MockHttpServletResponse response = patch("/Practitioner/" + PRACTITIONER_UUID).jsonPatch(jsonPractitionerPatch)
+		        .accept(FhirMediaTypes.JSON).go();
+		
+		assertThat(response, isOk());
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentAsString(), notNullValue());
+		
+		Practitioner practitioner = readResponse(response);
+		
+		assertThat(practitioner, notNullValue());
+		assertThat(practitioner.getIdElement().getIdPart(), equalTo(PRACTITIONER_UUID));
+		assertThat(practitioner, validResource());
+		
+		assertThat(practitioner.getGender(), is(Enumerations.AdministrativeGender.FEMALE));
+	}
+	
+	@Test
+	public void shouldPatchExistingPractitionerUsingXmlPatch() throws Exception {
+		String xmlPractitionerPatch;
+		try (InputStream is = this.getClass().getClassLoader().getResourceAsStream(XML_PATCH_PRACTITIONER_PATH)) {
+			Objects.requireNonNull(is);
+			xmlPractitionerPatch = inputStreamToString(is, UTF_8);
+		}
+		
+		MockHttpServletResponse response = patch("/Practitioner/" + PRACTITIONER_UUID).xmlPatch(xmlPractitionerPatch)
+		        .accept(FhirMediaTypes.XML).go();
+		
+		assertThat(response, isOk());
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentAsString(), notNullValue());
+		
+		Practitioner practitioner = readResponse(response);
+		
+		assertThat(practitioner, notNullValue());
+		assertThat(practitioner.getIdElement().getIdPart(), equalTo(PRACTITIONER_UUID));
+		assertThat(practitioner, validResource());
+		
+		assertThat(practitioner.getGender(), is(Enumerations.AdministrativeGender.FEMALE));
 	}
 	
 	@Test
@@ -387,7 +465,7 @@ public class PractitionerFhirResourceProviderIntegrationTest extends BaseFhirR4I
 		        .go();
 		
 		assertThat(response, isNotFound());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
@@ -401,7 +479,7 @@ public class PractitionerFhirResourceProviderIntegrationTest extends BaseFhirR4I
 		MockHttpServletResponse response = get("/Practitioner").accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Bundle results = readBundleResponse(response);
@@ -422,7 +500,7 @@ public class PractitionerFhirResourceProviderIntegrationTest extends BaseFhirR4I
 		MockHttpServletResponse response = get("/Practitioner").accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Bundle results = readBundleResponse(response);
@@ -443,7 +521,7 @@ public class PractitionerFhirResourceProviderIntegrationTest extends BaseFhirR4I
 		MockHttpServletResponse response = get("/Practitioner?&_summary=count").accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Bundle result = readBundleResponse(response);
@@ -458,7 +536,7 @@ public class PractitionerFhirResourceProviderIntegrationTest extends BaseFhirR4I
 		MockHttpServletResponse response = get("/Practitioner?&_summary=count").accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Bundle result = readBundleResponse(response);
@@ -466,5 +544,41 @@ public class PractitionerFhirResourceProviderIntegrationTest extends BaseFhirR4I
 		assertThat(result, notNullValue());
 		assertThat(result.getType(), equalTo(Bundle.BundleType.SEARCHSET));
 		assertThat(result, hasProperty("total", equalTo(6)));
+	}
+	
+	@Test
+	public void shouldReturnAnEtagHeaderWhenRetrievingAnExistingPractitioner() throws Exception {
+		MockHttpServletResponse response = get("/Practitioner/" + PRACTITIONER_UUID).accept(FhirMediaTypes.JSON).go();
+		
+		assertThat(response, isOk());
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
+		
+		assertThat(response.getHeader("etag"), notNullValue());
+		assertThat(response.getHeader("etag"), startsWith("W/"));
+		
+		assertThat(response.getContentAsString(), notNullValue());
+		
+		Practitioner practitioner = readResponse(response);
+		
+		assertThat(practitioner, notNullValue());
+		assertThat(practitioner.getMeta().getVersionId(), notNullValue());
+		assertThat(practitioner, validResource());
+	}
+	
+	@Test
+	public void shouldReturnNotModifiedWhenRetrievingAnExistingPractitionerWithAnEtag() throws Exception {
+		MockHttpServletResponse response = get("/Practitioner/" + PRACTITIONER_UUID).accept(FhirMediaTypes.JSON).go();
+		
+		assertThat(response, isOk());
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentAsString(), notNullValue());
+		assertThat(response.getHeader("etag"), notNullValue());
+		
+		String etagValue = response.getHeader("etag");
+		
+		response = get("/Practitioner/" + PRACTITIONER_UUID).accept(FhirMediaTypes.JSON).ifNoneMatchHeader(etagValue).go();
+		
+		assertThat(response, isOk());
+		assertThat(response, statusEquals(HttpStatus.NOT_MODIFIED));
 	}
 }

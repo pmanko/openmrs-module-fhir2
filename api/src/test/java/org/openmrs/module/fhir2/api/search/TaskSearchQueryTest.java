@@ -48,24 +48,35 @@ import org.hl7.fhir.r4.model.ServiceRequest;
 import org.hl7.fhir.r4.model.Task;
 import org.junit.Before;
 import org.junit.Test;
+import org.openmrs.module.fhir2.BaseFhirContextSensitiveTest;
 import org.openmrs.module.fhir2.FhirConstants;
-import org.openmrs.module.fhir2.TestFhirSpringConfiguration;
 import org.openmrs.module.fhir2.api.dao.FhirTaskDao;
 import org.openmrs.module.fhir2.api.search.param.SearchParameterMap;
 import org.openmrs.module.fhir2.api.translators.TaskTranslator;
 import org.openmrs.module.fhir2.model.FhirTask;
-import org.openmrs.test.BaseModuleContextSensitiveTest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.ContextConfiguration;
 
-@ContextConfiguration(classes = TestFhirSpringConfiguration.class, inheritLocations = false)
-public class TaskSearchQueryTest extends BaseModuleContextSensitiveTest {
+public class TaskSearchQueryTest extends BaseFhirContextSensitiveTest {
 	
 	private static final String TASK_DATA_XML = "org/openmrs/module/fhir2/api/dao/impl/FhirTaskDaoImplTest_initial_data.xml";
 	
 	private static final String TASK_DATA_OWNER_XML = "org/openmrs/module/fhir2/api/dao/impl/FhirTaskDaoImplTest_owner_data.xml";
 	
+	private static final String TASK_DATA_BARE_REFERENCE_XML = "org/openmrs/module/fhir2/api/dao/impl/FhirTaskDaoImplTest_bare_reference_data.xml";
+	
+	private static final String BARE_REFERENCE_TASK_UUID = "2ba49b19-6d51-4de9-8bb0-b2d3c86ab0a8";
+	
+	private static final String BARE_REFERENCE_ORDER_UUID = "05caaf38-35a1-4c06-a229-44b4ea608b34";
+	
+	private static final String BARE_REFERENCE_PRACTITIONER_UUID = "8f1a6b47-1f0d-4a5e-8f36-3f5f2c9a4d21";
+	
 	private static final String TASK_UUID = "d899333c-5bd4-45cc-b1e7-2f9542dbcbf6";
+	
+	private static final String INPROGRESS_TASK_UUID = "b3c9f4a7-44dc-4b29-adfd-a8b297a41f44";
+	
+	private static final String ONHOLD_TASK_UUID = "c4d0e5b8-55ed-4c30-beae-b9c308b520c5";
+	
+	private static final String ENTEREDINERROR_TASK_UUID = "f703b8e1-88f6-4f63-e1d1-e2f631e85388";
 	
 	private static final String BASED_ON_TASK_UUID = "3dc9f4a7-44dc-4b29-adfd-a8b297a41f33";
 	
@@ -80,6 +91,16 @@ public class TaskSearchQueryTest extends BaseModuleContextSensitiveTest {
 	private static final String OWNER_USER_UUID = "7f8aec9d-8269-4bb4-8bc5-1820bb31092c";
 	
 	private static final String TASK_REFF_UUID = "c1a3af38-c0a9-4c2e-9cc0-8e0440e357e6";
+	
+	private static final String PATIENT_UUID = "f1937b1a-dfff-43ac-ba9c-a62a48620b28";
+	
+	private static final String UNKNOWN_PATIENT_UUID = "ffcad013-4e04-4db2-af03-700b957c532b";
+	
+	private static final String FOR_TASK_UUID = "271a44b4-dbc8-4b83-8d3d-c794339d06e9";
+	
+	private static final String TASK_CODE_CONCEPT_ID = "5030";
+	
+	private static final String TASK_CODE_CONCEPT_UUID = "efc232b8-e591-4e93-b135-1cf8b4e30b95";
 	
 	private static final String DATE_CREATED = "2012-03-01";
 	
@@ -170,6 +191,48 @@ public class TaskSearchQueryTest extends BaseModuleContextSensitiveTest {
 		assertThat(((Task) resultList.iterator().next()).getIdElement().getIdPart(), equalTo(BASED_ON_TASK_UUID));
 	}
 	
+	/**
+	 * A reference whose id is stored without a "Type/" prefix - the shape written whenever a client
+	 * sends Reference.type alongside a bare resource id - leaves fhir_reference.target_uuid unset.
+	 * Searching by such a reference must still find the Task. See FM2-700.
+	 */
+	@Test
+	public void searchForTasks_shouldReturnTasksByBasedOnWhenTheStoredReferenceHasNoResourceTypePrefix() throws Exception {
+		executeDataSet(TASK_DATA_BARE_REFERENCE_XML);
+		
+		ReferenceParam basedOnReference = new ReferenceParam(
+		        FhirConstants.SERVICE_REQUEST + "/" + BARE_REFERENCE_ORDER_UUID);
+		
+		ReferenceAndListParam ref = new ReferenceAndListParam().addAnd(new ReferenceOrListParam().add(basedOnReference));
+		
+		SearchParameterMap theParams = new SearchParameterMap().addParameter(FhirConstants.BASED_ON_REFERENCE_SEARCH_HANDLER,
+		    ref);
+		
+		List<IBaseResource> resultList = get(search(theParams));
+		
+		assertThat(resultList, hasSize(equalTo(1)));
+		assertThat(((Task) resultList.iterator().next()).getIdElement().getIdPart(), equalTo(BARE_REFERENCE_TASK_UUID));
+	}
+	
+	/**
+	 * A bare id carries no resource type of its own, so the stored target_type is the only thing that
+	 * scopes it. Searching the same id under a different type must not match. See FM2-700.
+	 */
+	@Test
+	public void searchForTasks_shouldNotReturnTasksWhenABareReferenceIdIsSearchedUnderAnotherResourceType()
+	        throws Exception {
+		executeDataSet(TASK_DATA_BARE_REFERENCE_XML);
+		
+		ReferenceParam wrongType = new ReferenceParam(FhirConstants.PATIENT + "/" + BARE_REFERENCE_ORDER_UUID);
+		
+		ReferenceAndListParam ref = new ReferenceAndListParam().addAnd(new ReferenceOrListParam().add(wrongType));
+		
+		SearchParameterMap theParams = new SearchParameterMap().addParameter(FhirConstants.BASED_ON_REFERENCE_SEARCH_HANDLER,
+		    ref);
+		
+		assertThat(get(search(theParams)), empty());
+	}
+	
 	@Test
 	public void getTasksByBasedOnUuid_shouldReturnTasksForMultipleBasedOnReferenceOr() {
 		ReferenceParam basedOnReference = new ReferenceParam()
@@ -208,6 +271,44 @@ public class TaskSearchQueryTest extends BaseModuleContextSensitiveTest {
 		
 		assertThat(results, notNullValue());
 		assertThat(resultList, empty());
+	}
+	
+	/**
+	 * The mirror of the bare-id case: this row has target_uuid populated, and needs the same
+	 * resource-type scoping. See FM2-700.
+	 */
+	@Test
+	public void searchForTasks_shouldNotReturnTasksWhenATargetUuidMatchIsSearchedUnderAnotherResourceType() {
+		ReferenceParam wrongType = new ReferenceParam(FhirConstants.PATIENT + "/" + BASED_ON_ORDER_UUID);
+		
+		ReferenceAndListParam ref = new ReferenceAndListParam().addAnd(new ReferenceOrListParam().add(wrongType));
+		
+		SearchParameterMap theParams = new SearchParameterMap().addParameter(FhirConstants.BASED_ON_REFERENCE_SEARCH_HANDLER,
+		    ref);
+		
+		assertThat(get(search(theParams)), empty());
+	}
+	
+	/**
+	 * The same storage shape reaches every reference filter, since they all share
+	 * {@code FhirTaskDaoImpl#handleReference}. See FM2-700.
+	 */
+	@Test
+	public void searchForTasks_shouldReturnTasksByOwnerWhenTheStoredReferenceHasNoResourceTypePrefix() throws Exception {
+		executeDataSet(TASK_DATA_BARE_REFERENCE_XML);
+		
+		ReferenceParam ownerReference = new ReferenceParam(
+		        FhirConstants.PRACTITIONER + "/" + BARE_REFERENCE_PRACTITIONER_UUID);
+		
+		ReferenceAndListParam ref = new ReferenceAndListParam().addAnd(new ReferenceOrListParam().add(ownerReference));
+		
+		SearchParameterMap theParams = new SearchParameterMap().addParameter(FhirConstants.OWNER_REFERENCE_SEARCH_HANDLER,
+		    ref);
+		
+		List<IBaseResource> resultList = get(search(theParams));
+		
+		assertThat(resultList, hasSize(equalTo(1)));
+		assertThat(((Task) resultList.iterator().next()).getIdElement().getIdPart(), equalTo(BARE_REFERENCE_TASK_UUID));
 	}
 	
 	@Test
@@ -277,6 +378,101 @@ public class TaskSearchQueryTest extends BaseModuleContextSensitiveTest {
 	}
 	
 	@Test
+	public void searchForTasks_shouldReturnTasksByFor() throws Exception {
+		ReferenceParam forReference = new ReferenceParam();
+		forReference.setValue(FhirConstants.PATIENT + "/" + PATIENT_UUID);
+		
+		ReferenceAndListParam ref = new ReferenceAndListParam().addAnd(new ReferenceOrListParam().add(forReference));
+		
+		SearchParameterMap theParams = new SearchParameterMap().addParameter(FhirConstants.FOR_REFERENCE_SEARCH_HANDLER,
+		    ref);
+		
+		IBundleProvider results = search(theParams);
+		
+		List<IBaseResource> resultList = get(results);
+		
+		assertThat(results, notNullValue());
+		assertThat(resultList, not(empty()));
+		assertThat(resultList.size(), equalTo(1));
+		assertThat(resultList, hasItem(hasProperty("id", equalTo(FOR_TASK_UUID))));
+	}
+	
+	@Test
+	public void searchForTasks_shouldReturnTasksByMultipleForOr() throws Exception {
+		ReferenceParam forReference = new ReferenceParam().setValue(FhirConstants.PATIENT + "/" + PATIENT_UUID);
+		ReferenceParam badReference = new ReferenceParam().setValue(FhirConstants.PATIENT + "/" + UNKNOWN_PATIENT_UUID);
+		
+		ReferenceAndListParam ref = new ReferenceAndListParam()
+		        .addAnd(new ReferenceOrListParam().add(forReference).add(badReference));
+		
+		SearchParameterMap theParams = new SearchParameterMap().addParameter(FhirConstants.FOR_REFERENCE_SEARCH_HANDLER,
+		    ref);
+		
+		IBundleProvider results = search(theParams);
+		
+		List<IBaseResource> resultList = get(results);
+		
+		assertThat(results, notNullValue());
+		assertThat(resultList, not(empty()));
+		assertThat(resultList.size(), equalTo(1));
+		assertThat(resultList, hasItem(hasProperty("id", equalTo(FOR_TASK_UUID))));
+	}
+	
+	@Test
+	public void searchForTasks_shouldReturnEmptyTaskListByMultipleForAnd() throws Exception {
+		ReferenceParam forReference = new ReferenceParam().setValue(FhirConstants.PATIENT + "/" + PATIENT_UUID);
+		ReferenceParam badReference = new ReferenceParam().setValue(FhirConstants.PATIENT + "/" + UNKNOWN_PATIENT_UUID);
+		
+		ReferenceAndListParam ref = new ReferenceAndListParam().addAnd(new ReferenceOrListParam().add(forReference))
+		        .addAnd(new ReferenceOrListParam().add(badReference));
+		
+		SearchParameterMap theParams = new SearchParameterMap().addParameter(FhirConstants.FOR_REFERENCE_SEARCH_HANDLER,
+		    ref);
+		
+		IBundleProvider results = search(theParams);
+		
+		List<IBaseResource> resultList = get(results);
+		
+		assertThat(results, notNullValue());
+		assertThat(resultList, empty());
+		assertThat(resultList.size(), equalTo(0));
+	}
+	
+	@Test
+	public void searchForTasks_shouldReturnTasksByTaskCode() {
+		TokenAndListParam taskCode = new TokenAndListParam().addAnd(new TokenParam().setValue(TASK_CODE_CONCEPT_ID));
+		
+		SearchParameterMap theParams = new SearchParameterMap().addParameter(FhirConstants.TASK_CODE_SEARCH_HANDLER,
+		    taskCode);
+		
+		IBundleProvider results = search(theParams);
+		
+		List<IBaseResource> resultList = get(results);
+		
+		assertThat(results, notNullValue());
+		assertThat(resultList, not(empty()));
+		assertThat(resultList.size(), equalTo(1));
+		assertThat(resultList, hasItem(hasProperty("id", equalTo(FOR_TASK_UUID))));
+	}
+	
+	@Test
+	public void searchForTasks_shouldReturnTasksByTaskCodeConceptUuid() {
+		TokenAndListParam taskCode = new TokenAndListParam().addAnd(new TokenParam().setValue(TASK_CODE_CONCEPT_UUID));
+		
+		SearchParameterMap theParams = new SearchParameterMap().addParameter(FhirConstants.TASK_CODE_SEARCH_HANDLER,
+		    taskCode);
+		
+		IBundleProvider results = search(theParams);
+		
+		List<IBaseResource> resultList = get(results);
+		
+		assertThat(results, notNullValue());
+		assertThat(resultList, not(empty()));
+		assertThat(resultList.size(), equalTo(1));
+		assertThat(resultList, hasItem(hasProperty("id", equalTo(FOR_TASK_UUID))));
+	}
+	
+	@Test
 	public void searchForTasks_shouldReturnTasksByStatus() {
 		TokenAndListParam status = new TokenAndListParam().addAnd(
 		    new TokenOrListParam().add(FhirConstants.TASK_STATUS_VALUE_SET_URI, Task.TaskStatus.ACCEPTED.toString()));
@@ -308,11 +504,41 @@ public class TaskSearchQueryTest extends BaseModuleContextSensitiveTest {
 		
 		assertThat(results, notNullValue());
 		assertThat(resultList, not(empty()));
-		assertThat(resultList.size(), equalTo(4));
+		assertThat(resultList.size(), equalTo(7));
 		assertThat(resultList, hasItem(hasProperty("id", equalTo(TASK_UUID))));
 		assertThat(resultList, hasItem(hasProperty("status", equalTo(Task.TaskStatus.ACCEPTED))));
 		assertThat(resultList, hasItem(hasProperty("status", equalTo(Task.TaskStatus.REQUESTED))));
 		assertThat(resultList, not(hasItem(hasProperty("status", equalTo(Task.TaskStatus.REJECTED)))));
+	}
+	
+	@Test
+	public void searchForTasks_shouldReturnAllTasksForUnrecognizedStatus() {
+		TokenAndListParam status = new TokenAndListParam()
+		        .addAnd(new TokenOrListParam().add(FhirConstants.TASK_STATUS_VALUE_SET_URI, "not-a-real-status"));
+		
+		SearchParameterMap theParams = new SearchParameterMap().addParameter(FhirConstants.STATUS_SEARCH_HANDLER, status);
+		
+		IBundleProvider results = search(theParams);
+		
+		List<IBaseResource> resultList = get(results);
+		
+		assertThat(results, notNullValue());
+		assertThat(resultList, not(empty()));
+	}
+	
+	@Test
+	public void searchForTasks_shouldReturnAllTasksForEmptyStatus() {
+		TokenAndListParam status = new TokenAndListParam()
+		        .addAnd(new TokenOrListParam().add(FhirConstants.TASK_STATUS_VALUE_SET_URI, ""));
+		
+		SearchParameterMap theParams = new SearchParameterMap().addParameter(FhirConstants.STATUS_SEARCH_HANDLER, status);
+		
+		IBundleProvider results = search(theParams);
+		
+		List<IBaseResource> resultList = get(results);
+		
+		assertThat(results, notNullValue());
+		assertThat(resultList, not(empty()));
 	}
 	
 	@Test
@@ -330,6 +556,60 @@ public class TaskSearchQueryTest extends BaseModuleContextSensitiveTest {
 		
 		assertThat(results, notNullValue());
 		assertThat(resultList, empty());
+	}
+	
+	@Test
+	public void searchForTasks_shouldReturnTasksByWireCodeInProgress() {
+		TokenAndListParam status = new TokenAndListParam()
+		        .addAnd(new TokenOrListParam().add(FhirConstants.TASK_STATUS_VALUE_SET_URI, "in-progress"));
+		
+		SearchParameterMap theParams = new SearchParameterMap().addParameter(FhirConstants.STATUS_SEARCH_HANDLER, status);
+		
+		IBundleProvider results = search(theParams);
+		
+		List<IBaseResource> resultList = get(results);
+		
+		assertThat(results, notNullValue());
+		assertThat(resultList, not(empty()));
+		assertThat(resultList, hasSize(equalTo(1)));
+		assertThat(resultList, hasItem(hasProperty("id", equalTo(INPROGRESS_TASK_UUID))));
+		assertThat(resultList, everyItem(hasProperty("status", equalTo(Task.TaskStatus.INPROGRESS))));
+	}
+	
+	@Test
+	public void searchForTasks_shouldReturnTasksByWireCodeOnHold() {
+		TokenAndListParam status = new TokenAndListParam()
+		        .addAnd(new TokenOrListParam().add(FhirConstants.TASK_STATUS_VALUE_SET_URI, "on-hold"));
+		
+		SearchParameterMap theParams = new SearchParameterMap().addParameter(FhirConstants.STATUS_SEARCH_HANDLER, status);
+		
+		IBundleProvider results = search(theParams);
+		
+		List<IBaseResource> resultList = get(results);
+		
+		assertThat(results, notNullValue());
+		assertThat(resultList, not(empty()));
+		assertThat(resultList, hasSize(equalTo(1)));
+		assertThat(resultList, hasItem(hasProperty("id", equalTo(ONHOLD_TASK_UUID))));
+		assertThat(resultList, everyItem(hasProperty("status", equalTo(Task.TaskStatus.ONHOLD))));
+	}
+	
+	@Test
+	public void searchForTasks_shouldReturnTasksByWireCodeEnteredInError() {
+		TokenAndListParam status = new TokenAndListParam()
+		        .addAnd(new TokenOrListParam().add(FhirConstants.TASK_STATUS_VALUE_SET_URI, "entered-in-error"));
+		
+		SearchParameterMap theParams = new SearchParameterMap().addParameter(FhirConstants.STATUS_SEARCH_HANDLER, status);
+		
+		IBundleProvider results = search(theParams);
+		
+		List<IBaseResource> resultList = get(results);
+		
+		assertThat(results, notNullValue());
+		assertThat(resultList, not(empty()));
+		assertThat(resultList, hasSize(equalTo(1)));
+		assertThat(resultList, hasItem(hasProperty("id", equalTo(ENTEREDINERROR_TASK_UUID))));
+		assertThat(resultList, everyItem(hasProperty("status", equalTo(Task.TaskStatus.ENTEREDINERROR))));
 	}
 	
 	@Test
@@ -630,7 +910,7 @@ public class TaskSearchQueryTest extends BaseModuleContextSensitiveTest {
 		List<IBaseResource> resultList = results.getResources(START_INDEX, END_INDEX);
 		
 		assertThat(resultList, not(empty()));
-		assertThat(resultList.size(), equalTo(5)); // included resource added as part of result list
+		assertThat(resultList, hasSize(5)); // included resource added as part of result list
 		assertThat(((Task) resultList.iterator().next()).getIdElement().getIdPart(), equalTo(TASK_REFF_UUID));
 		
 		Task returnedTask = (Task) resultList.iterator().next();

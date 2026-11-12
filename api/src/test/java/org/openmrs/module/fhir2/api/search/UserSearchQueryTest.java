@@ -44,21 +44,20 @@ import ca.uhn.fhir.rest.param.StringParam;
 import ca.uhn.fhir.rest.param.TokenAndListParam;
 import ca.uhn.fhir.rest.param.TokenOrListParam;
 import ca.uhn.fhir.rest.param.TokenParam;
+import org.hibernate.SessionFactory;
 import org.hl7.fhir.r4.model.Practitioner;
 import org.junit.Before;
 import org.junit.Test;
 import org.openmrs.User;
+import org.openmrs.module.fhir2.BaseFhirContextSensitiveTest;
 import org.openmrs.module.fhir2.FhirConstants;
-import org.openmrs.module.fhir2.TestFhirSpringConfiguration;
 import org.openmrs.module.fhir2.api.dao.FhirUserDao;
 import org.openmrs.module.fhir2.api.search.param.SearchParameterMap;
 import org.openmrs.module.fhir2.api.translators.PractitionerTranslator;
-import org.openmrs.test.BaseModuleContextSensitiveTest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.ContextConfiguration;
+import org.springframework.beans.factory.annotation.Qualifier;
 
-@ContextConfiguration(classes = TestFhirSpringConfiguration.class, inheritLocations = false)
-public class UserSearchQueryTest extends BaseModuleContextSensitiveTest {
+public class UserSearchQueryTest extends BaseFhirContextSensitiveTest {
 	
 	private static final String USER_INITIAL_DATA_XML = "org/openmrs/module/fhir2/api/dao/impl/FhirUserDaoImplTest_initial_data.xml";
 	
@@ -105,6 +104,10 @@ public class UserSearchQueryTest extends BaseModuleContextSensitiveTest {
 	private static final int END_INDEX = 10;
 	
 	@Autowired
+	@Qualifier("sessionFactory")
+	private SessionFactory sessionFactory;
+	
+	@Autowired
 	private FhirUserDao dao;
 	
 	@Autowired
@@ -128,6 +131,8 @@ public class UserSearchQueryTest extends BaseModuleContextSensitiveTest {
 	@Before
 	public void setUp() throws Exception {
 		executeDataSet(USER_INITIAL_DATA_XML);
+		// Evict Hibernate L2 cache so entities loaded via JDBC/DbUnit are re-read from DB
+		sessionFactory.getCache().evictAllRegions();
 	}
 	
 	@Test

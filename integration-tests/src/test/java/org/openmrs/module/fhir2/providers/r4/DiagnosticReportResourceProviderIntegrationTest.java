@@ -50,6 +50,14 @@ public class DiagnosticReportResourceProviderIntegrationTest extends BaseFhirR4I
 	
 	private static final String DATA_XML = "org/openmrs/module/fhir2/api/dao/impl/FhirDiagnosticReportDaoImplTest_initial_data.xml";
 	
+	private static final String DATA_XML_REPORT_WITH_RESULT_AND_ORDER_REF = "org/openmrs/module/fhir2/api/dao/impl/FhirDiagnosticReportProviderTest_initial_data.xml";
+	
+	private static final String JSON_MERGE_PATCH_REPORT_PATH = "org/openmrs/module/fhir2/providers/DiagnosticReport_patch.json";
+	
+	private static final String JSON_PATCH_REPORT_PATH = "org/openmrs/module/fhir2/providers/DiagnosticReport_json_patch.json";
+	
+	private static final String XML_PATCH_REPORT_PATH = "org/openmrs/module/fhir2/providers/DiagnosticReport_xml_patch.xml";
+	
 	private static final String DIAGNOSTIC_REPORT_UUID = "1e589127-f391-4d0c-8e98-e0a158b2be22";
 	
 	private static final String WRONG_DIAGNOSTIC_REPORT_UUID = "6ebc40fb-fe8b-4208-9526-68375d2cbe1c";
@@ -57,6 +65,10 @@ public class DiagnosticReportResourceProviderIntegrationTest extends BaseFhirR4I
 	private static final String DIAGNOSTIC_REPORT_CONCEPT_UUID = "5085AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 	
 	private static final String JSON_CREATE_DIAGNOSTIC_REPORT_DOCUMENT = "org/openmrs/module/fhir2/providers/DiagnosticReport_create_r4.json";
+	
+	private static final String JSON_CREATE_DIAGNOSTIC_REPORT_DOCUMENT_WITH_ORDER_REFERENCES = "org/openmrs/module/fhir2/providers/DiagnosticReport_with_service_request_refs_create_r4.json";
+	
+	private static final String JSON_CREATE_DIAGNOSTIC_REPORT_DOCUMENT_WITH_INVALID_ORDER_REFERENCES = "org/openmrs/module/fhir2/providers/DiagnosticReport_with_invalid_service_request_refs_create_r4.json";
 	
 	private static final String XML_CREATE_DIAGNOSTIC_REPORT_DOCUMENT = "org/openmrs/module/fhir2/providers/DiagnosticReport_create_r4.xml";
 	
@@ -78,7 +90,7 @@ public class DiagnosticReportResourceProviderIntegrationTest extends BaseFhirR4I
 		        .go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		DiagnosticReport diagnosticReport = readResponse(response);
@@ -118,7 +130,7 @@ public class DiagnosticReportResourceProviderIntegrationTest extends BaseFhirR4I
 		        .accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isNotFound());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
@@ -135,7 +147,7 @@ public class DiagnosticReportResourceProviderIntegrationTest extends BaseFhirR4I
 		        .go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		DiagnosticReport diagnosticReport = readResponse(response);
@@ -175,7 +187,7 @@ public class DiagnosticReportResourceProviderIntegrationTest extends BaseFhirR4I
 		        .accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isNotFound());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
@@ -199,7 +211,7 @@ public class DiagnosticReportResourceProviderIntegrationTest extends BaseFhirR4I
 		
 		assertThat(response, isCreated());
 		assertThat(response.getHeader("Location"), containsString("/DiagnosticReport/"));
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		DiagnosticReport diagnosticReport = readResponse(response);
@@ -242,7 +254,7 @@ public class DiagnosticReportResourceProviderIntegrationTest extends BaseFhirR4I
 		
 		assertThat(response, isCreated());
 		assertThat(response.getHeader("Location"), containsString("/DiagnosticReport/"));
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		DiagnosticReport diagnosticReport = readResponse(response);
@@ -291,7 +303,7 @@ public class DiagnosticReportResourceProviderIntegrationTest extends BaseFhirR4I
 		        .accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		// read the updated record
@@ -324,7 +336,7 @@ public class DiagnosticReportResourceProviderIntegrationTest extends BaseFhirR4I
 		        .accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isBadRequest());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
@@ -348,7 +360,7 @@ public class DiagnosticReportResourceProviderIntegrationTest extends BaseFhirR4I
 		        .accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isNotFound());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
@@ -375,7 +387,7 @@ public class DiagnosticReportResourceProviderIntegrationTest extends BaseFhirR4I
 		        .accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		// read the updated record
@@ -408,7 +420,7 @@ public class DiagnosticReportResourceProviderIntegrationTest extends BaseFhirR4I
 		        .accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isBadRequest());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
@@ -432,13 +444,85 @@ public class DiagnosticReportResourceProviderIntegrationTest extends BaseFhirR4I
 		        .accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isNotFound());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
 		
 		assertThat(operationOutcome, notNullValue());
 		assertThat(operationOutcome.hasIssue(), is(true));
+	}
+	
+	@Test
+	public void shouldPatchExistingDiagnosticReportUsingJsonMergePatch() throws Exception {
+		String jsonDiagnosticReportPatch;
+		try (InputStream is = this.getClass().getClassLoader().getResourceAsStream(JSON_MERGE_PATCH_REPORT_PATH)) {
+			Objects.requireNonNull(is);
+			jsonDiagnosticReportPatch = inputStreamToString(is, UTF_8);
+		}
+		
+		MockHttpServletResponse response = patch("/DiagnosticReport/" + DIAGNOSTIC_REPORT_UUID)
+		        .jsonMergePatch(jsonDiagnosticReportPatch).accept(FhirMediaTypes.JSON).go();
+		
+		assertThat(response, isOk());
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentAsString(), notNullValue());
+		
+		DiagnosticReport diagnosticReport = readResponse(response);
+		
+		assertThat(diagnosticReport, notNullValue());
+		assertThat(diagnosticReport.getIdElement().getIdPart(), equalTo(DIAGNOSTIC_REPORT_UUID));
+		assertThat(diagnosticReport, validResource());
+		
+		assertThat(diagnosticReport.getStatus(), equalTo(DiagnosticReport.DiagnosticReportStatus.REGISTERED));
+	}
+	
+	@Test
+	public void shouldPatchExistingDiagnosticReportUsingJsonPatch() throws Exception {
+		String jsonDiagnosticReportPatch;
+		try (InputStream is = this.getClass().getClassLoader().getResourceAsStream(JSON_PATCH_REPORT_PATH)) {
+			Objects.requireNonNull(is);
+			jsonDiagnosticReportPatch = inputStreamToString(is, UTF_8);
+		}
+		
+		MockHttpServletResponse response = patch("/DiagnosticReport/" + DIAGNOSTIC_REPORT_UUID)
+		        .jsonPatch(jsonDiagnosticReportPatch).accept(FhirMediaTypes.JSON).go();
+		
+		assertThat(response, isOk());
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentAsString(), notNullValue());
+		
+		DiagnosticReport diagnosticReport = readResponse(response);
+		
+		assertThat(diagnosticReport, notNullValue());
+		assertThat(diagnosticReport.getIdElement().getIdPart(), equalTo(DIAGNOSTIC_REPORT_UUID));
+		assertThat(diagnosticReport, validResource());
+		
+		assertThat(diagnosticReport.getStatus(), equalTo(DiagnosticReport.DiagnosticReportStatus.REGISTERED));
+	}
+	
+	@Test
+	public void shouldPatchExistingDiagnosticReportUsingXmlPatch() throws Exception {
+		String xmlDiagnosticReportPatch;
+		try (InputStream is = this.getClass().getClassLoader().getResourceAsStream(XML_PATCH_REPORT_PATH)) {
+			Objects.requireNonNull(is);
+			xmlDiagnosticReportPatch = inputStreamToString(is, UTF_8);
+		}
+		
+		MockHttpServletResponse response = patch("/DiagnosticReport/" + DIAGNOSTIC_REPORT_UUID)
+		        .xmlPatch(xmlDiagnosticReportPatch).accept(FhirMediaTypes.XML).go();
+		
+		assertThat(response, isOk());
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentAsString(), notNullValue());
+		
+		DiagnosticReport diagnosticReport = readResponse(response);
+		
+		assertThat(diagnosticReport, notNullValue());
+		assertThat(diagnosticReport.getIdElement().getIdPart(), equalTo(DIAGNOSTIC_REPORT_UUID));
+		assertThat(diagnosticReport, validResource());
+		
+		assertThat(diagnosticReport.getStatus(), equalTo(DiagnosticReport.DiagnosticReportStatus.REGISTERED));
 	}
 	
 	@Test
@@ -459,7 +543,7 @@ public class DiagnosticReportResourceProviderIntegrationTest extends BaseFhirR4I
 		        .accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isNotFound());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
@@ -473,7 +557,7 @@ public class DiagnosticReportResourceProviderIntegrationTest extends BaseFhirR4I
 		MockHttpServletResponse response = get("/DiagnosticReport").accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Bundle results = readBundleResponse(response);
@@ -495,7 +579,7 @@ public class DiagnosticReportResourceProviderIntegrationTest extends BaseFhirR4I
 		        .accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Bundle results = readBundleResponse(response);
@@ -526,7 +610,7 @@ public class DiagnosticReportResourceProviderIntegrationTest extends BaseFhirR4I
 		MockHttpServletResponse response = get("/DiagnosticReport").accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Bundle results = readBundleResponse(response);
@@ -548,7 +632,7 @@ public class DiagnosticReportResourceProviderIntegrationTest extends BaseFhirR4I
 		        .accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Bundle results = readBundleResponse(response);
@@ -580,7 +664,7 @@ public class DiagnosticReportResourceProviderIntegrationTest extends BaseFhirR4I
 		        .accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Bundle result = readBundleResponse(response);
@@ -596,7 +680,7 @@ public class DiagnosticReportResourceProviderIntegrationTest extends BaseFhirR4I
 		        .accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Bundle result = readBundleResponse(response);
@@ -604,5 +688,151 @@ public class DiagnosticReportResourceProviderIntegrationTest extends BaseFhirR4I
 		assertThat(result, notNullValue());
 		assertThat(result.getType(), equalTo(Bundle.BundleType.SEARCHSET));
 		assertThat(result, hasProperty("total", equalTo(2)));
+	}
+	
+	@Test
+	public void shouldReturnAnEtagHeaderWhenRetrievingAnExistingDiagnosticReport() throws Exception {
+		MockHttpServletResponse response = get("/DiagnosticReport/" + DIAGNOSTIC_REPORT_UUID).accept(FhirMediaTypes.JSON)
+		        .go();
+		
+		assertThat(response, isOk());
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
+		
+		assertThat(response.getHeader("etag"), notNullValue());
+		assertThat(response.getHeader("etag"), startsWith("W/"));
+		
+		assertThat(response.getContentAsString(), notNullValue());
+		
+		DiagnosticReport diagnosticReport = readResponse(response);
+		
+		assertThat(diagnosticReport, notNullValue());
+		assertThat(diagnosticReport.getMeta().getVersionId(), notNullValue());
+		assertThat(diagnosticReport, validResource());
+	}
+	
+	@Test
+	public void shouldReturnNotModifiedWhenRetrievingAnExistingDiagnosticReportWithAnEtag() throws Exception {
+		MockHttpServletResponse response = get("/DiagnosticReport/" + DIAGNOSTIC_REPORT_UUID).accept(FhirMediaTypes.JSON)
+		        .go();
+		
+		assertThat(response, isOk());
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentAsString(), notNullValue());
+		assertThat(response.getHeader("etag"), notNullValue());
+		
+		String etagValue = response.getHeader("etag");
+		
+		response = get("/DiagnosticReport/" + DIAGNOSTIC_REPORT_UUID).accept(FhirMediaTypes.JSON)
+		        .ifNoneMatchHeader(etagValue).go();
+		
+		assertThat(response, isOk());
+		assertThat(response, statusEquals(HttpStatus.NOT_MODIFIED));
+	}
+	
+	@Test
+	public void shouldReturnDiagnosticReportWithOrderReference() throws Exception {
+		executeDataSet(DATA_XML_REPORT_WITH_RESULT_AND_ORDER_REF);
+		
+		MockHttpServletResponse response = get("/DiagnosticReport/5798a2d8-9b3f-4afd-9958-cd60181011db")
+		        .accept(FhirMediaTypes.JSON).go();
+		
+		assertThat(response, isOk());
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentAsString(), notNullValue());
+		
+		DiagnosticReport diagnosticReport = readResponse(response);
+		
+		assertThat(diagnosticReport, notNullValue());
+		assertThat(diagnosticReport.getIdElement().getIdPart(), equalTo("5798a2d8-9b3f-4afd-9958-cd60181011db"));
+		
+		assertThat(diagnosticReport.hasCategory(), is(true));
+		
+		assertThat(diagnosticReport.hasSubject(), is(true));
+		assertThat(diagnosticReport.getSubject().getReference(), equalTo("Patient/83f3c829-06db-4ad0-9dab-ed60489ef031"));
+		
+		assertThat(diagnosticReport.hasEncounter(), is(true));
+		assertThat(diagnosticReport.getEncounter().getReference(),
+		    equalTo("Encounter/e421144c-46b3-4417-a2c7-2164317175ea"));
+		
+		assertThat(diagnosticReport.hasCode(), is(true));
+		assertThat(diagnosticReport.getCode().getCoding(),
+		    hasItem(hasProperty("code", equalTo("1019AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"))));
+		
+		assertThat(diagnosticReport.getBasedOn(), hasSize(2));
+		
+		assertThat(diagnosticReport.hasIssued(), is(true));
+		assertThat(diagnosticReport.getIssued(),
+		    equalTo(Date.from(LocalDateTime.of(2008, 7, 1, 0, 0, 0).atZone(ZoneId.systemDefault()).toInstant())));
+		
+		assertThat(diagnosticReport.hasResult(), is(true));
+		assertThat(diagnosticReport.getResult(), hasSize(2));
+		assertThat(diagnosticReport.getResult(),
+		    hasItem(hasProperty("reference", equalTo("Observation/5192d8cf-c248-49e5-88dd-8b91e6e8445d"))));
+		assertThat(diagnosticReport.getResult(),
+		    hasItem(hasProperty("reference", equalTo("Observation/66218784-04dc-4fba-a539-fd3d7ef41327"))));
+		assertThat(diagnosticReport, validResource());
+	}
+	
+	@Test
+	public void shouldCreateNewDiagnosticReportWithOrderRefs() throws Exception {
+		executeDataSet(DATA_XML_REPORT_WITH_RESULT_AND_ORDER_REF);
+		String jsonReport;
+		try (InputStream is = this.getClass().getClassLoader()
+		        .getResourceAsStream(JSON_CREATE_DIAGNOSTIC_REPORT_DOCUMENT_WITH_ORDER_REFERENCES)) {
+			Objects.requireNonNull(is);
+			jsonReport = inputStreamToString(is, UTF_8);
+		}
+		
+		MockHttpServletResponse response = post("/DiagnosticReport").accept(FhirMediaTypes.JSON).jsonContent(jsonReport)
+		        .go();
+		
+		assertThat(response, isCreated());
+		assertThat(response.getHeader("Location"), containsString("/DiagnosticReport/"));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentAsString(), notNullValue());
+		
+		DiagnosticReport diagnosticReport = readResponse(response);
+		
+		assertThat(diagnosticReport, notNullValue());
+		assertThat(diagnosticReport.getIdElement().getIdPart(), notNullValue());
+		assertThat(diagnosticReport.getStatus(), equalTo(DiagnosticReport.DiagnosticReportStatus.FINAL));
+		assertThat(diagnosticReport.getCategoryFirstRep().getCodingFirstRep().getCode(), equalTo("LAB"));
+		
+		assertThat(diagnosticReport.getCode().getCoding(), hasSize(greaterThanOrEqualTo(1)));
+		assertThat(diagnosticReport.getCode().getCoding().get(0).getSystem(), nullValue());
+		assertThat(diagnosticReport.getCode().getCoding().get(0).getCode(), equalTo("1019AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"));
+		
+		assertThat(diagnosticReport.getSubject().getReference(), equalTo("Patient/83f3c829-06db-4ad0-9dab-ed60489ef031"));
+		assertThat(diagnosticReport.getEncounter().getReference(),
+		    equalTo("Encounter/e421144c-46b3-4417-a2c7-2164317175ea"));
+		
+		assertThat(diagnosticReport.getIssued(),
+		    equalTo(Date.from(LocalDateTime.of(2011, 3, 4, 11, 45, 33).atOffset(ZoneOffset.ofHours(11)).toInstant())));
+		
+		assertThat(diagnosticReport.getResult(), hasSize(3));
+		assertThat(diagnosticReport.getResult(),
+		    hasItem(hasProperty("reference", equalTo("Observation/66218784-04dc-4fba-a539-fd3d7ef41327"))));
+		assertThat(diagnosticReport.getResult(),
+		    hasItem(hasProperty("reference", equalTo("Observation/5192d8cf-c248-49e5-88dd-8b91e6e8445d"))));
+		assertThat(diagnosticReport.getResult(),
+		    hasItem(hasProperty("reference", equalTo("Observation/a8f5183c-b710-47f9-adf7-52bc565a0bbd"))));
+		
+		assertThat(diagnosticReport.getConclusion(), equalTo("Normal Study"));
+	}
+	
+	@Test
+	public void shouldNotCreateNewDiagnosticReportWithInvalidOrderRefs() throws Exception {
+		executeDataSet(DATA_XML_REPORT_WITH_RESULT_AND_ORDER_REF);
+		String jsonReport;
+		try (InputStream is = this.getClass().getClassLoader()
+		        .getResourceAsStream(JSON_CREATE_DIAGNOSTIC_REPORT_DOCUMENT_WITH_INVALID_ORDER_REFERENCES)) {
+			Objects.requireNonNull(is);
+			jsonReport = inputStreamToString(is, UTF_8);
+		}
+		
+		MockHttpServletResponse response = post("/DiagnosticReport").accept(FhirMediaTypes.JSON).jsonContent(jsonReport)
+		        .go();
+		
+		assertThat(response, isBadRequest());
 	}
 }

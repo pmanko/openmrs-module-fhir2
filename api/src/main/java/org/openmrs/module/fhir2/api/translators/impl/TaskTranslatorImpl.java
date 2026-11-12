@@ -9,40 +9,50 @@
  */
 package org.openmrs.module.fhir2.api.translators.impl;
 
+import static lombok.AccessLevel.PROTECTED;
 import static org.apache.commons.lang3.Validate.notNull;
+import static org.openmrs.module.fhir2.api.translators.impl.FhirTranslatorUtils.getLastUpdated;
+import static org.openmrs.module.fhir2.api.translators.impl.FhirTranslatorUtils.getVersionId;
 
 import javax.annotation.Nonnull;
 
 import java.util.Collections;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
-import lombok.AccessLevel;
+import lombok.Getter;
 import lombok.Setter;
-import org.hl7.fhir.r4.model.CodeableConcept;
+import org.hl7.fhir.r4.model.Annotation;
 import org.hl7.fhir.r4.model.Identifier;
-import org.hl7.fhir.r4.model.Reference;
-import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.Period;
 import org.hl7.fhir.r4.model.Task;
-import org.openmrs.Concept;
 import org.openmrs.module.fhir2.FhirConstants;
 import org.openmrs.module.fhir2.api.translators.ConceptTranslator;
 import org.openmrs.module.fhir2.api.translators.ReferenceTranslator;
+import org.openmrs.module.fhir2.api.translators.TaskInputTranslator;
+import org.openmrs.module.fhir2.api.translators.TaskOutputTranslator;
 import org.openmrs.module.fhir2.api.translators.TaskTranslator;
-import org.openmrs.module.fhir2.model.FhirReference;
 import org.openmrs.module.fhir2.model.FhirTask;
-import org.openmrs.module.fhir2.model.FhirTaskInput;
-import org.openmrs.module.fhir2.model.FhirTaskOutput;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
-@Setter(AccessLevel.PACKAGE)
 public class TaskTranslatorImpl implements TaskTranslator {
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private ReferenceTranslator referenceTranslator;
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
+	private TaskInputTranslator taskInputTranslator;
+	
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
+	private TaskOutputTranslator taskOutputTranslator;
+	
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private ConceptTranslator conceptTranslator;
 	
 	@Override
@@ -102,18 +112,46 @@ public class TaskTranslatorImpl implements TaskTranslator {
 			fhirTask.setOwner(referenceTranslator.toFhirResource(openmrsTask.getOwnerReference()));
 		}
 		
+		if (openmrsTask.getFocusReference() != null) {
+			fhirTask.setFocus(referenceTranslator.toFhirResource(openmrsTask.getFocusReference()));
+		}
+		
 		if (openmrsTask.getLocationReference() != null) {
 			fhirTask.setLocation(referenceTranslator.toFhirResource(openmrsTask.getLocationReference()));
 		}
 		
 		if (openmrsTask.getInput() != null && !openmrsTask.getInput().isEmpty()) {
-			fhirTask.setInput(
-			    openmrsTask.getInput().stream().map(this::translateFromInputText).collect(Collectors.toList()));
+			fhirTask.setInput(openmrsTask.getInput().stream().map(taskInputTranslator::toFhirResource)
+			        .filter(Objects::nonNull).collect(Collectors.toList()));
 		}
 		
 		if (openmrsTask.getOutput() != null && !openmrsTask.getOutput().isEmpty()) {
-			fhirTask.setOutput(
-			    openmrsTask.getOutput().stream().map(this::translateFromOutputReferences).collect(Collectors.toList()));
+			fhirTask.setOutput(openmrsTask.getOutput().stream().map(taskOutputTranslator::toFhirResource)
+			        .filter(Objects::nonNull).collect(Collectors.toList()));
+		}
+		
+		if (openmrsTask.getTaskCode() != null) {
+			fhirTask.setCode(conceptTranslator.toFhirResource(openmrsTask.getTaskCode()));
+		}
+		
+		if (openmrsTask.getPartOfReferences() != null && !openmrsTask.getPartOfReferences().isEmpty()) {
+			fhirTask.setPartOf(openmrsTask.getPartOfReferences().stream().map(referenceTranslator::toFhirResource)
+			        .collect(Collectors.toList()));
+		}
+		
+		if (openmrsTask.getExecutionStartTime() != null || openmrsTask.getExecutionEndTime() != null) {
+			Period period = new Period();
+			if (openmrsTask.getExecutionStartTime() != null) {
+				period.setStart(openmrsTask.getExecutionStartTime());
+			}
+			if (openmrsTask.getExecutionEndTime() != null) {
+				period.setEnd(openmrsTask.getExecutionEndTime());
+			}
+			fhirTask.setExecutionPeriod(period);
+		}
+		
+		if (openmrsTask.getComment() != null) {
+			fhirTask.addNote(new Annotation().setText(openmrsTask.getComment()));
 		}
 		
 		fhirTask.setAuthoredOn(openmrsTask.getDateCreated());
@@ -127,7 +165,8 @@ public class TaskTranslatorImpl implements TaskTranslator {
 		fhirTask.setIdentifier(Collections.singletonList(
 		    new Identifier().setSystem(FhirConstants.OPENMRS_FHIR_EXT_TASK_IDENTIFIER).setValue(openmrsTask.getUuid())));
 		
-		fhirTask.getMeta().setLastUpdated(openmrsTask.getDateChanged());
+		fhirTask.getMeta().setLastUpdated(getLastUpdated(openmrsTask));
+		fhirTask.getMeta().setVersionId(getVersionId(openmrsTask));
 	}
 	
 	private void setOpenmrsTaskFields(FhirTask openmrsTask, Task fhirTask) {
@@ -168,57 +207,48 @@ public class TaskTranslatorImpl implements TaskTranslator {
 			openmrsTask.setOwnerReference(referenceTranslator.toOpenmrsType(fhirTask.getOwner()));
 		}
 		
+		if (fhirTask.hasFocus()) {
+			openmrsTask.setFocusReference(referenceTranslator.toOpenmrsType(fhirTask.getFocus()));
+		}
+		
 		if (!fhirTask.getLocation().isEmpty()) {
 			openmrsTask.setLocationReference(referenceTranslator.toOpenmrsType(fhirTask.getLocation()));
 		}
 		
 		if (!fhirTask.getInput().isEmpty()) {
-			openmrsTask.setInput(fhirTask.getInput().stream().map(this::translateToInputText).collect(Collectors.toSet()));
+			openmrsTask.setInput(fhirTask.getInput().stream().map(taskInputTranslator::toOpenmrsType)
+			        .filter(Objects::nonNull).collect(Collectors.toSet()));
 		}
 		
 		if (!fhirTask.getOutput().isEmpty()) {
-			openmrsTask.setOutput(
-			    fhirTask.getOutput().stream().map(this::translateToOutputReference).collect(Collectors.toSet()));
+			openmrsTask.setOutput(fhirTask.getOutput().stream().map(taskOutputTranslator::toOpenmrsType)
+			        .filter(Objects::nonNull).collect(Collectors.toSet()));
+		}
+		
+		if (fhirTask.hasCode()) {
+			openmrsTask.setTaskCode(conceptTranslator.toOpenmrsType(fhirTask.getCode()));
+		}
+		
+		if (fhirTask.hasExecutionPeriod()) {
+			if (fhirTask.getExecutionPeriod().hasStart()) {
+				openmrsTask.setExecutionStartTime(fhirTask.getExecutionPeriod().getStart());
+			}
+			if (fhirTask.getExecutionPeriod().hasEnd()) {
+				openmrsTask.setExecutionEndTime(fhirTask.getExecutionPeriod().getEnd());
+			}
+		}
+		
+		if (fhirTask.hasPartOf()) {
+			openmrsTask.setPartOfReferences(
+			    fhirTask.getPartOf().stream().map(referenceTranslator::toOpenmrsType).collect(Collectors.toSet()));
+		}
+		
+		if (fhirTask.hasNote()) {
+			openmrsTask.setComment(fhirTask.getNoteFirstRep().getText());
 		}
 		
 		openmrsTask.setName(FhirConstants.TASK + "/" + fhirTask.getId());
 		
 	}
 	
-	private FhirTaskOutput translateToOutputReference(Task.TaskOutputComponent taskOutputComponent) {
-		FhirReference outputReference = referenceTranslator.toOpenmrsType((Reference) taskOutputComponent.getValue());
-		Concept type = conceptTranslator.toOpenmrsType(taskOutputComponent.getType());
-		FhirTaskOutput output = new FhirTaskOutput();
-		
-		output.setValueReference(outputReference);
-		output.setType(type);
-		
-		output.setName("TaskOutputComponent/" + output.getUuid());
-		
-		return output;
-	}
-	
-	private FhirTaskInput translateToInputText(Task.ParameterComponent parameterComponent) {
-		Concept type = conceptTranslator.toOpenmrsType(parameterComponent.getType());
-		FhirTaskInput input = new FhirTaskInput();
-		
-		input.setType(type);
-		input.setValueText(parameterComponent.getValue().toString());
-		input.setName("ParameterComponent/" + input.getUuid());
-		
-		return input;
-	}
-	
-	private Task.TaskOutputComponent translateFromOutputReferences(FhirTaskOutput openmrsOutput) {
-		Reference ref = referenceTranslator.toFhirResource(openmrsOutput.getValueReference());
-		CodeableConcept type = conceptTranslator.toFhirResource(openmrsOutput.getType());
-		
-		return new Task.TaskOutputComponent().setType(type).setValue(ref);
-	}
-	
-	private Task.ParameterComponent translateFromInputText(FhirTaskInput openmrsInput) {
-		CodeableConcept type = conceptTranslator.toFhirResource(openmrsInput.getType());
-		
-		return new Task.ParameterComponent().setType(type).setValue(new StringType().setValue(openmrsInput.getValueText()));
-	}
 }

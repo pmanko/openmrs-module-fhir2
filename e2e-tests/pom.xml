@@ -3,13 +3,14 @@
     <parent>
         <artifactId>fhir2</artifactId>
         <groupId>org.openmrs.module</groupId>
-        <version>1.9.0-SNAPSHOT</version>
+        <version>5.0.0-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>fhir2-e2e-tests</artifactId>
     <name>FHIR2 End-to-End Tests</name>
     <description>End-to-End Tests for the FHIR2 Module</description>
+    <packaging>pom</packaging>
 
     <dependencies>
         <dependency>
@@ -48,12 +49,7 @@
             <groupId>${project.parent.groupId}</groupId>
             <artifactId>${project.parent.artifactId}-test-data</artifactId>
             <version>${project.parent.version}</version>
-            <type>test-jar</type>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
         </dependency>
         <dependency>
             <groupId>javax.servlet</groupId>
@@ -81,26 +77,35 @@
                 <configuration>
                     <skipIfEmpty>true</skipIfEmpty>
                 </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>test-jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-install-plugin</artifactId>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
             </plugin>
             <plugin>
-                <groupId>org.commonjava.maven.plugins</groupId>
-                <artifactId>directory-maven-plugin</artifactId>
-            </plugin>
-            <plugin>
                 <groupId>com.mycila</groupId>
                 <artifactId>license-maven-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>net.revelc.code.formatter</groupId>
-                <artifactId>formatter-maven-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>net.revelc.code</groupId>
-                <artifactId>impsort-maven-plugin</artifactId>
             </plugin>
         </plugins>
     </build>

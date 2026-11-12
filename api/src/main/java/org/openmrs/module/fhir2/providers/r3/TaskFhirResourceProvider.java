@@ -10,6 +10,7 @@
 package org.openmrs.module.fhir2.providers.r3;
 
 import static lombok.AccessLevel.PACKAGE;
+import static lombok.AccessLevel.PROTECTED;
 
 import javax.annotation.Nonnull;
 
@@ -34,6 +35,7 @@ import ca.uhn.fhir.rest.param.ReferenceAndListParam;
 import ca.uhn.fhir.rest.param.TokenAndListParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.collections.CollectionUtils;
 import org.hl7.fhir.dstu3.model.IdType;
@@ -43,6 +45,7 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.openmrs.module.fhir2.api.FhirTaskService;
 import org.openmrs.module.fhir2.api.annotations.R3Provider;
 import org.openmrs.module.fhir2.api.search.SearchQueryBundleProviderR3Wrapper;
+import org.openmrs.module.fhir2.api.search.param.TaskSearchParams;
 import org.openmrs.module.fhir2.providers.util.FhirProviderUtils;
 import org.openmrs.module.fhir2.providers.util.TaskVersionConverter;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,10 +53,10 @@ import org.springframework.stereotype.Component;
 
 @Component("taskFhirR3ResourceProvider")
 @R3Provider
-@Setter(PACKAGE)
 public class TaskFhirResourceProvider implements IResourceProvider {
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PACKAGE, onMethod_ = @Autowired)
 	private FhirTaskService fhirTaskService;
 	
 	@Override
@@ -95,6 +98,8 @@ public class TaskFhirResourceProvider implements IResourceProvider {
 	public IBundleProvider searchTasks(
 	        @OptionalParam(name = Task.SP_BASED_ON, chainWhitelist = { "" }) ReferenceAndListParam basedOnReference,
 	        @OptionalParam(name = Task.SP_OWNER, chainWhitelist = { "" }) ReferenceAndListParam ownerReference,
+	        @OptionalParam(name = Task.SP_SUBJECT, chainWhitelist = { "" }) ReferenceAndListParam forReference,
+	        @OptionalParam(name = Task.SP_CODE) TokenAndListParam taskCode,
 	        @OptionalParam(name = Task.SP_STATUS) TokenAndListParam status,
 	        @OptionalParam(name = Task.SP_RES_ID) TokenAndListParam id,
 	        @OptionalParam(name = "_lastUpdated") DateRangeParam lastUpdated, @Sort SortSpec sort,
@@ -104,7 +109,7 @@ public class TaskFhirResourceProvider implements IResourceProvider {
 		if (CollectionUtils.isEmpty(includes)) {
 			includes = null;
 		}
-		return new SearchQueryBundleProviderR3Wrapper(
-		        fhirTaskService.searchForTasks(basedOnReference, ownerReference, status, id, lastUpdated, sort, includes));
+		return new SearchQueryBundleProviderR3Wrapper(fhirTaskService.searchForTasks(new TaskSearchParams(basedOnReference,
+		        ownerReference, forReference, taskCode, status, id, lastUpdated, sort, includes)));
 	}
 }

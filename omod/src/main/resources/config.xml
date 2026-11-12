@@ -26,18 +26,10 @@
 	
 	<!-- <updateURL>https://modules.openmrs.org/modules/download/@MODULE_ID@/update.rdf</updateURL> -->
 	<!-- /Base Module Properties -->
-	
-	<require_version>2.0.5 - 2.*</require_version>
 
-    <conditionalResources>
-		<conditionalResource>
-			<path>/lib/fhir2-api-2.1-${project.parent.version}.jar</path>
-			<openmrsVersion>2.1.* - 9.*</openmrsVersion>
-		</conditionalResource>
-        <conditionalResource>
-            <path>/lib/fhir2-api-2.2-${project.parent.version}.jar</path>
-            <openmrsVersion>2.2.* - 9.*</openmrsVersion>
-        </conditionalResource>
+	<require_version>2.4.0 - 2.*</require_version>
+
+	<conditionalResources>
 		<conditionalResource>
 			<path>/lib/fhir2-api-2.5-${project.parent.version}.jar</path>
 			<openmrsVersion>2.5.* - 9.*</openmrsVersion>
@@ -46,20 +38,45 @@
 			<path>/lib/fhir2-api-2.6-${project.parent.version}.jar</path>
 			<openmrsVersion>2.6.* - 9.*</openmrsVersion>
 		</conditionalResource>
+	    	<conditionalResource>
+			<path>/lib/fhir2-api-2.7-${project.parent.version}.jar</path>
+			<openmrsVersion>2.7.* - 9.*</openmrsVersion>
+		</conditionalResource>
 		<conditionalResource>
-			<path>/lib/jackson-.*.jar</path>
+			<path>/lib/jackson-annotations-.*.jar</path>
+			<openmrsVersion>2.0.5 - 2.1.2</openmrsVersion>
+		</conditionalResource>
+		<conditionalResource>
+			<path>/lib/jackson-core-.*.jar</path>
+			<openmrsVersion>2.0.5 - 2.1.2</openmrsVersion>
+		</conditionalResource>
+		<conditionalResource>
+			<path>/lib/jackson-databind-.*.jar</path>
 			<openmrsVersion>2.0.5 - 2.1.2</openmrsVersion>
 		</conditionalResource>
 		<conditionalResource>
 			<path>/lib/commons-io.*.jar</path>
 			<openmrsVersion>2.0.5 - 2.1.*</openmrsVersion>
 		</conditionalResource>
-    </conditionalResources>
+	</conditionalResources>
 
-
-	<aware_of_modules>
-		<aware_of_module>org.openmrs.module.legacyui</aware_of_module>
-	</aware_of_modules>
+	<!-- Privileges guarding the module-owned FHIR Task table; core defines none for Tasks -->
+	<privilege>
+		<name>Get FHIR Tasks</name>
+		<description>Able to read FHIR Tasks</description>
+	</privilege>
+	<privilege>
+		<name>Add FHIR Tasks</name>
+		<description>Able to create FHIR Tasks</description>
+	</privilege>
+	<privilege>
+		<name>Edit FHIR Tasks</name>
+		<description>Able to update FHIR Tasks</description>
+	</privilege>
+	<privilege>
+		<name>Delete FHIR Tasks</name>
+		<description>Able to delete FHIR Tasks</description>
+	</privilege>
 
 	<servlet>
 		<servlet-name>fhir2Servlet</servlet-name>
@@ -171,5 +188,19 @@
 		<property>${project.parent.artifactId}.locationTypeAttributeTypeUuid</property>
 		<description>The UUID for the Location Attribute Type representing the Location Type</description>
 	</globalProperty>
+
+	<globalProperty>
+		<property>${project.parent.artifactId}.supportedLocationHierarchySearchDepth</property>
+		<description>Defines how many levels of searching to before when using a Location?partof:below={uuid} search.  Generally set this number to the number of levels in your location hierarchy.</description>
+		<defaultValue>5</defaultValue>
+	</globalProperty>
+
+    <globalProperty>
+        <property>${project.parent.artifactId}.upsert.supported.resources</property>
+        <description>
+            Comma-separated list of resource names for which a new item is created if it does not exist when processing
+            an update request.
+        </description>
+    </globalProperty>
 
 </module>

@@ -10,6 +10,7 @@
 package org.openmrs.module.fhir2.providers.r4;
 
 import static lombok.AccessLevel.PACKAGE;
+import static lombok.AccessLevel.PROTECTED;
 
 import java.util.HashSet;
 
@@ -19,19 +20,22 @@ import ca.uhn.fhir.rest.annotation.Delete;
 import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.IncludeParam;
 import ca.uhn.fhir.rest.annotation.OptionalParam;
+import ca.uhn.fhir.rest.annotation.Patch;
 import ca.uhn.fhir.rest.annotation.Read;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
 import ca.uhn.fhir.rest.annotation.Search;
 import ca.uhn.fhir.rest.annotation.Sort;
-import ca.uhn.fhir.rest.annotation.Update;
 import ca.uhn.fhir.rest.api.MethodOutcome;
+import ca.uhn.fhir.rest.api.PatchTypeEnum;
 import ca.uhn.fhir.rest.api.SortSpec;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
+import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.param.DateRangeParam;
 import ca.uhn.fhir.rest.param.ReferenceAndListParam;
 import ca.uhn.fhir.rest.param.TokenAndListParam;
-import ca.uhn.fhir.rest.server.IResourceProvider;
+import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.collections.CollectionUtils;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -40,16 +44,17 @@ import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.Task;
 import org.openmrs.module.fhir2.api.FhirTaskService;
 import org.openmrs.module.fhir2.api.annotations.R4Provider;
+import org.openmrs.module.fhir2.api.search.param.TaskSearchParams;
 import org.openmrs.module.fhir2.providers.util.FhirProviderUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component("taskFhirR4ResourceProvider")
 @R4Provider
-@Setter(PACKAGE)
-public class TaskFhirResourceProvider implements IResourceProvider {
+public class TaskFhirResourceProvider extends BaseUpsertFhirResourceProvider<Task> {
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PACKAGE, onMethod_ = @Autowired)
 	private FhirTaskService service;
 	
 	@Override
@@ -71,9 +76,21 @@ public class TaskFhirResourceProvider implements IResourceProvider {
 		return FhirProviderUtils.buildCreate(service.create(newTask));
 	}
 	
-	@Update
-	public MethodOutcome updateTask(@IdParam IdType id, @ResourceParam Task task) {
-		return FhirProviderUtils.buildUpdate(service.update(id.getIdPart(), task));
+	@Override
+	protected MethodOutcome doUpsert(IdType id, Task task, RequestDetails requestDetails, boolean createIfNotExists) {
+		return FhirProviderUtils.buildUpdate(service.update(id.getIdPart(), task, requestDetails, createIfNotExists));
+	}
+	
+	@Patch
+	public MethodOutcome patchTask(@IdParam IdType id, PatchTypeEnum patchType, @ResourceParam String body,
+	        RequestDetails requestDetails) {
+		if (id == null || id.getIdPart() == null) {
+			throw new InvalidRequestException("id must be specified to patch Task resource");
+		}
+		
+		Task task = service.patch(id.getIdPart(), patchType, body, requestDetails);
+		
+		return FhirProviderUtils.buildPatch(task);
 	}
 	
 	@Delete
@@ -86,6 +103,9 @@ public class TaskFhirResourceProvider implements IResourceProvider {
 	public IBundleProvider searchTasks(
 	        @OptionalParam(name = Task.SP_BASED_ON, chainWhitelist = { "" }) ReferenceAndListParam basedOnReference,
 	        @OptionalParam(name = Task.SP_OWNER, chainWhitelist = { "" }) ReferenceAndListParam ownerReference,
+	        @OptionalParam(name = Task.SP_SUBJECT, chainWhitelist = { "" }) ReferenceAndListParam forReference,
+	        @OptionalParam(name = Task.SP_FOCUS, chainWhitelist = { "" }) ReferenceAndListParam focusReference,
+	        @OptionalParam(name = Task.SP_CODE) TokenAndListParam taskCode,
 	        @OptionalParam(name = Task.SP_STATUS) TokenAndListParam status,
 	        @OptionalParam(name = Task.SP_RES_ID) TokenAndListParam id,
 	        @OptionalParam(name = "_lastUpdated") DateRangeParam lastUpdated, @Sort SortSpec sort,
@@ -94,6 +114,8 @@ public class TaskFhirResourceProvider implements IResourceProvider {
 		if (CollectionUtils.isEmpty(includes)) {
 			includes = null;
 		}
-		return service.searchForTasks(basedOnReference, ownerReference, status, id, lastUpdated, sort, includes);
+		return service.searchForTasks(TaskSearchParams.builder().basedOnReference(basedOnReference)
+		        .ownerReference(ownerReference).forReference(forReference).focusReference(focusReference).taskCode(taskCode)
+		        .status(status).id(id).lastUpdated(lastUpdated).sort(sort).includes(includes).build());
 	}
 }

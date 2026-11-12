@@ -48,9 +48,17 @@ public class LocationFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 	
 	private static final String PARENT_LOCATION_UUID = "76cd2d30-2411-44ef-84ea-8b7473256a6a";
 	
+	private static final String LOCATION_ANCESTOR_TEST_UUID = "76cd2d30-2411-44ef-84ea-8b7473256a6a";
+	
 	private static final String JSON_CREATE_LOCATION_DOCUMENT = "org/openmrs/module/fhir2/providers/LocationWebTest_create.json";
 	
 	private static final String XML_CREATE_LOCATION_DOCUMENT = "org/openmrs/module/fhir2/providers/LocationWebTest_create.xml";
+	
+	private static final String JSON_MERGE_PATCH_LOCATION_PATH = "org/openmrs/module/fhir2/providers/Location_merge_json_patch.json";
+	
+	private static final String JSON_PATCH_LOCATION_PATH = "org/openmrs/module/fhir2/providers/Location_json_patch.json";
+	
+	private static final String XML_PATCH_LOCATION_PATH = "org/openmrs/module/fhir2/providers/Location_xml_patch.xml";
 	
 	@Getter(AccessLevel.PUBLIC)
 	@Autowired
@@ -71,7 +79,7 @@ public class LocationFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		MockHttpServletResponse response = get("/Location/" + LOCATION_UUID).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Location location = readResponse(response);
@@ -86,7 +94,7 @@ public class LocationFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		MockHttpServletResponse response = get("/Location/" + UNKNOWN_LOCATION_UUID).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isNotFound());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
@@ -100,7 +108,7 @@ public class LocationFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		MockHttpServletResponse response = get("/Location/" + LOCATION_UUID).accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Location location = readResponse(response);
@@ -115,7 +123,7 @@ public class LocationFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		MockHttpServletResponse response = get("/Location/" + UNKNOWN_LOCATION_UUID).accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isNotFound());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
@@ -138,7 +146,7 @@ public class LocationFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		
 		// verify created correctly
 		assertThat(response, isCreated());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Location location = readResponse(response);
@@ -180,7 +188,7 @@ public class LocationFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		
 		// verify created correctly
 		assertThat(response, isCreated());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Location location = readResponse(response);
@@ -219,7 +227,7 @@ public class LocationFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		
 		// verify created correctly
 		assertThat(response, isCreated());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Location location = readResponse(response);
@@ -255,7 +263,7 @@ public class LocationFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		response = put("/Location/" + LOCATION_UUID).jsonContent(toJson(location)).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		// read the updated record
@@ -286,7 +294,7 @@ public class LocationFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		response = put("/Location/" + LOCATION_UUID).jsonContent(toJson(location)).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isBadRequest());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
@@ -308,7 +316,7 @@ public class LocationFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		response = put("/Location/" + UNKNOWN_LOCATION_UUID).jsonContent(toJson(location)).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isNotFound());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
@@ -330,7 +338,7 @@ public class LocationFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		response = put("/Location/" + LOCATION_UUID).xmlContent(toXML(location)).accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		// read the updated record
@@ -361,7 +369,7 @@ public class LocationFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		response = put("/Location/" + LOCATION_UUID).xmlContent(toXML(location)).accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isBadRequest());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
@@ -383,7 +391,7 @@ public class LocationFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		response = put("/Location/" + UNKNOWN_LOCATION_UUID).xmlContent(toXML(location)).accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isNotFound());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
@@ -408,13 +416,98 @@ public class LocationFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		MockHttpServletResponse response = delete("/Location/" + UNKNOWN_LOCATION_UUID).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isNotFound());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
 		
 		assertThat(operationOutcome, notNullValue());
 		assertThat(operationOutcome.hasIssue(), is(true));
+	}
+	
+	@Test
+	public void shouldPatchExistingLocationUsingJsonMergePatch() throws Exception {
+		String jsonLocationPatch;
+		try (InputStream is = this.getClass().getClassLoader().getResourceAsStream(JSON_MERGE_PATCH_LOCATION_PATH)) {
+			Objects.requireNonNull(is);
+			jsonLocationPatch = inputStreamToString(is, UTF_8);
+		}
+		
+		MockHttpServletResponse response = patch("/Location/" + LOCATION_UUID).jsonMergePatch(jsonLocationPatch)
+		        .accept(FhirMediaTypes.JSON).go();
+		
+		assertThat(response, isOk());
+		assertThat(response, notNullValue());
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentAsString(), notNullValue());
+		
+		Location location = readResponse(response);
+		
+		assertThat(location, notNullValue());
+		assertThat(location.getIdElement().getIdPart(), equalTo(LOCATION_UUID));
+		assertThat(location, validResource());
+		
+		assertThat(location.getName(), is("Patched Location"));
+		assertThat(location.getAddress().getCity(), is("Wakiso"));
+		assertThat(location.getAddress().getCountry(), is("Uganda"));
+		assertThat(location.getAddress().getPostalCode(), is("0000 WK"));
+		assertThat(location.getAddress().getState(), is("Central Region"));
+	}
+	
+	@Test
+	public void shouldPatchExistingLocationUsingJsonPatch() throws Exception {
+		String jsonLocationPatch;
+		try (InputStream is = this.getClass().getClassLoader().getResourceAsStream(JSON_PATCH_LOCATION_PATH)) {
+			Objects.requireNonNull(is);
+			jsonLocationPatch = inputStreamToString(is, UTF_8);
+		}
+		MockHttpServletResponse response = patch("/Location/" + LOCATION_UUID).jsonPatch(jsonLocationPatch)
+		        .accept(FhirMediaTypes.JSON).go();
+		
+		assertThat(response, isOk());
+		assertThat(response, notNullValue());
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentAsString(), notNullValue());
+		
+		Location location = readResponse(response);
+		
+		assertThat(location, notNullValue());
+		assertThat(location.getIdElement().getIdPart(), equalTo(LOCATION_UUID));
+		assertThat(location, validResource());
+		
+		assertThat(location.getName(), is("Patched Location"));
+		assertThat(location.getAddress().getCity(), is("Wakiso"));
+		assertThat(location.getAddress().getCountry(), is("Uganda"));
+		assertThat(location.getAddress().getPostalCode(), is("0000 WK"));
+		assertThat(location.getAddress().getState(), is("Central Region"));
+	}
+	
+	@Test
+	public void shouldPatchExistingLocationUsingXmlPatch() throws Exception {
+		String xmlLocationPatch;
+		try (InputStream is = this.getClass().getClassLoader().getResourceAsStream(XML_PATCH_LOCATION_PATH)) {
+			Objects.requireNonNull(is);
+			xmlLocationPatch = inputStreamToString(is, UTF_8);
+		}
+		MockHttpServletResponse response = patch("/Location/" + LOCATION_UUID).xmlPatch(xmlLocationPatch)
+		        .accept(FhirMediaTypes.XML).go();
+		
+		assertThat(response, isOk());
+		assertThat(response, notNullValue());
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentAsString(), notNullValue());
+		
+		Location location = readResponse(response);
+		
+		assertThat(location, notNullValue());
+		assertThat(location.getIdElement().getIdPart(), equalTo(LOCATION_UUID));
+		assertThat(location, validResource());
+		
+		assertThat(location.getName(), is("Patched Location"));
+		assertThat(location.getAddress().getCity(), is("Wakiso"));
+		assertThat(location.getAddress().getCountry(), is("Uganda"));
+		assertThat(location.getAddress().getPostalCode(), is("0000 WK"));
+		assertThat(location.getAddress().getState(), is("Central Region"));
 	}
 	
 	@Test
@@ -433,7 +526,7 @@ public class LocationFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		MockHttpServletResponse response = delete("/Location/" + UNKNOWN_LOCATION_UUID).accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isNotFound());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		OperationOutcome operationOutcome = readOperationOutcome(response);
@@ -447,7 +540,7 @@ public class LocationFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		MockHttpServletResponse response = get("/Location").accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Bundle results = readBundleResponse(response);
@@ -462,11 +555,12 @@ public class LocationFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		assertThat(entries, everyItem(hasResource(instanceOf(Location.class))));
 		assertThat(entries, everyItem(hasResource(validResource())));
 		
+		// search by address and parent location
 		response = get("/Location?address-city=Kerio&partof=" + PARENT_LOCATION_UUID + "&_sort=name")
 		        .accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		results = readBundleResponse(response);
@@ -483,6 +577,30 @@ public class LocationFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		assertThat(entries, containsInRelativeOrder(hasResource(hasProperty("name", equalTo("Test location 6"))),
 		    hasResource(hasProperty("name", equalTo("Test location 8")))));
 		assertThat(entries, everyItem(hasResource(validResource())));
+		
+		// search by ancestors
+		response = get("/Location?partof:below=" + LOCATION_ANCESTOR_TEST_UUID).accept(FhirMediaTypes.JSON).go();
+		
+		assertThat(response, isOk());
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentAsString(), notNullValue());
+		
+		results = readBundleResponse(response);
+		
+		assertThat(results, notNullValue());
+		assertThat(results.getType(), equalTo(Bundle.BundleType.SEARCHSET));
+		assertThat(results.hasEntry(), is(true));
+		
+		entries = results.getEntry();
+		assertThat(entries.size(), is(4));
+		
+		assertThat(entries,
+		    containsInRelativeOrder(hasResource(hasProperty("name", equalTo("Test location 6"))),
+		        hasResource(hasProperty("name", equalTo("Test location 8"))),
+		        hasResource(hasProperty("name", equalTo("Test location 11"))),
+		        hasResource(hasProperty("name", equalTo("Test location 12")))));
+		assertThat(entries, everyItem(hasResource(validResource())));
+		
 	}
 	
 	@Test
@@ -490,7 +608,7 @@ public class LocationFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		MockHttpServletResponse response = get("/Location").accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Bundle results = readBundleResponse(response);
@@ -509,7 +627,7 @@ public class LocationFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		        .accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		results = readBundleResponse(response);
@@ -526,6 +644,30 @@ public class LocationFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		assertThat(entries, containsInRelativeOrder(hasResource(hasProperty("name", equalTo("Test location 6"))),
 		    hasResource(hasProperty("name", equalTo("Test location 8")))));
 		assertThat(entries, everyItem(hasResource(validResource())));
+		
+		// search by ancestors
+		response = get("/Location?partof:below=" + LOCATION_ANCESTOR_TEST_UUID).accept(FhirMediaTypes.XML).go();
+		
+		assertThat(response, isOk());
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentAsString(), notNullValue());
+		
+		results = readBundleResponse(response);
+		
+		assertThat(results, notNullValue());
+		assertThat(results.getType(), equalTo(Bundle.BundleType.SEARCHSET));
+		assertThat(results.hasEntry(), is(true));
+		
+		entries = results.getEntry();
+		assertThat(entries.size(), is(4));
+		
+		assertThat(entries,
+		    containsInRelativeOrder(hasResource(hasProperty("name", equalTo("Test location 6"))),
+		        hasResource(hasProperty("name", equalTo("Test location 8"))),
+		        hasResource(hasProperty("name", equalTo("Test location 11"))),
+		        hasResource(hasProperty("name", equalTo("Test location 12")))));
+		assertThat(entries, everyItem(hasResource(validResource())));
+		
 	}
 	
 	@Test
@@ -533,14 +675,14 @@ public class LocationFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		MockHttpServletResponse response = get("/Location?_summary=count").accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Bundle result = readBundleResponse(response);
 		
 		assertThat(result, notNullValue());
 		assertThat(result.getType(), equalTo(Bundle.BundleType.SEARCHSET));
-		assertThat(result, hasProperty("total", equalTo(9)));
+		assertThat(result, hasProperty("total", equalTo(11)));
 	}
 	
 	@Test
@@ -548,13 +690,49 @@ public class LocationFhirResourceProviderIntegrationTest extends BaseFhirR4Integ
 		MockHttpServletResponse response = get("/Location?_summary=count").accept(FhirMediaTypes.XML).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), is(FhirMediaTypes.XML.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.XML.toString()));
 		assertThat(response.getContentAsString(), notNullValue());
 		
 		Bundle result = readBundleResponse(response);
 		
 		assertThat(result, notNullValue());
 		assertThat(result.getType(), equalTo(Bundle.BundleType.SEARCHSET));
-		assertThat(result, hasProperty("total", equalTo(9)));
+		assertThat(result, hasProperty("total", equalTo(11)));
+	}
+	
+	@Test
+	public void shouldReturnAnEtagHeaderWhenRetrievingAnExistingLocation() throws Exception {
+		MockHttpServletResponse response = get("/Location/" + LOCATION_UUID).accept(FhirMediaTypes.JSON).go();
+		
+		assertThat(response, isOk());
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
+		
+		assertThat(response.getHeader("etag"), notNullValue());
+		assertThat(response.getHeader("etag"), startsWith("W/"));
+		
+		assertThat(response.getContentAsString(), notNullValue());
+		
+		Location location = readResponse(response);
+		
+		assertThat(location, notNullValue());
+		assertThat(location.getMeta().getVersionId(), notNullValue());
+		assertThat(location, validResource());
+	}
+	
+	@Test
+	public void shouldReturnNotModifiedWhenRetrievingAnExistingLocationWithAnEtag() throws Exception {
+		MockHttpServletResponse response = get("/Location/" + LOCATION_UUID).accept(FhirMediaTypes.JSON).go();
+		
+		assertThat(response, isOk());
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentAsString(), notNullValue());
+		assertThat(response.getHeader("etag"), notNullValue());
+		
+		String etagValue = response.getHeader("etag");
+		
+		response = get("/Location/" + LOCATION_UUID).accept(FhirMediaTypes.JSON).ifNoneMatchHeader(etagValue).go();
+		
+		assertThat(response, isOk());
+		assertThat(response, statusEquals(HttpStatus.NOT_MODIFIED));
 	}
 }

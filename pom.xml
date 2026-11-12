@@ -4,7 +4,7 @@
 
     <groupId>org.openmrs.module</groupId>
     <artifactId>fhir2</artifactId>
-    <version>1.9.0-SNAPSHOT</version>
+    <version>5.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>FHIR2</name>
     <description>Implementation of FHIR R4 for OpenMRS</description>
@@ -17,12 +17,12 @@
     <licenses>
         <license>
             <name>OpenMRS Public License</name>
-            <url>https://openmrs.org/wiki/License</url>
+            <url>https://openmrs.org/license</url>
         </license>
     </licenses>
 
     <organization>
-        <name>OpenMRS LLC.</name>
+        <name>OpenMRS</name>
         <url>https://openmrs.org</url>
     </organization>
 
@@ -38,15 +38,8 @@
     <modules>
         <module>test-data</module>
         <module>api</module>
-        <module>api-2.1</module>
-        <module>api-2.2</module>
-        <module>api-2.5</module>
-        <module>api-2.6</module>
         <module>omod</module>
         <module>integration-tests</module>
-        <module>integration-tests-2.1</module>
-        <module>integration-tests-2.2</module>
-        <module>integration-tests-2.6</module>
         <module>e2e-tests</module>
     </modules>
 
@@ -117,6 +110,16 @@
                 <artifactId>openmrs-api</artifactId>
                 <version>${openmrsPlatformVersion}</version>
                 <scope>provided</scope>
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.fasterxml.jackson.core</groupId>
+                        <artifactId>jackson-core</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>com.fasterxml.jackson.core</groupId>
+                        <artifactId>jackson-annotations</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.openmrs.web</groupId>
@@ -124,6 +127,10 @@
                 <version>${openmrsPlatformVersion}</version>
                 <scope>provided</scope>
                 <exclusions>
+                    <exclusion>
+                        <groupId>javax.servlet</groupId>
+                        <artifactId>servlet-api</artifactId>
+                    </exclusion>
                     <exclusion>
                         <groupId>javax.servlet</groupId>
                         <artifactId>jstl</artifactId>
@@ -140,12 +147,6 @@
                 <version>${openmrsPlatformVersion}</version>
                 <type>test-jar</type>
                 <scope>test</scope>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.javassist</groupId>
-                        <artifactId>javassist</artifactId>
-                    </exclusion>
-                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.openmrs.web</groupId>
@@ -154,6 +155,10 @@
                 <classifier>tests</classifier>
                 <scope>test</scope>
                 <exclusions>
+                    <exclusion>
+                        <groupId>javax.servlet</groupId>
+                        <artifactId>servlet-api</artifactId>
+                    </exclusion>
                     <exclusion>
                         <groupId>javax.servlet</groupId>
                         <artifactId>jstl</artifactId>
@@ -222,6 +227,10 @@
                         <groupId>com.fasterxml.jackson.core</groupId>
                         <artifactId>jackson-databind</artifactId>
                     </exclusion>
+                    <exclusion>
+                        <groupId>com.fasterxml.jackson.datatype</groupId>
+                        <artifactId>jackson-datatype-jsr310</artifactId>
+                    </exclusion>
                 </exclusions>
             </dependency>
             <dependency>
@@ -234,8 +243,20 @@
                         <artifactId>spring-messaging</artifactId>
                     </exclusion>
                     <exclusion>
+                        <groupId>org.springframework.batch</groupId>
+                        <artifactId>spring-batch-core</artifactId>
+                    </exclusion>
+                    <exclusion>
                         <groupId>org.jetbrains.kotlin</groupId>
                         <artifactId>kotlin-stdlib-jdk8</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.slf4j</groupId>
+                        <artifactId>slf4j-api</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.simplejavamail</groupId>
+                        <artifactId>simple-java-mail</artifactId>
                     </exclusion>
                 </exclusions>
             </dependency>
@@ -358,31 +379,57 @@
             <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
-                <version>31.0.1-jre</version>
+                <version>33.4.8-jre</version>
             </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-text</artifactId>
+                <version>1.13.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.squareup.okio</groupId>
+                <artifactId>okio</artifactId>
+                <version>3.6.0</version>
+            </dependency>
+            <!-- Support for patches -->
+            <dependency>
+                <groupId>com.github.java-json-tools</groupId>
+                <artifactId>json-patch</artifactId>
+                <version>1.13</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.fasterxml.jackson.core</groupId>
+                        <artifactId>jackson-databind</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <!-- https://mvnrepository.com/artifact/javax.servlet/javax.servlet-api -->
             <dependency>
                 <groupId>javax.servlet</groupId>
                 <artifactId>javax.servlet-api</artifactId>
-                <version>3.1.0</version>
+                <version>4.0.1</version>
                 <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
-                <version>2.13.3</version>
+                <version>2.18.3</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.datatype</groupId>
+                <artifactId>jackson-datatype-jsr310</artifactId>
+                <version>2.18.3</version>
+                <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>org.thymeleaf</groupId>
                 <artifactId>thymeleaf</artifactId>
-                <version>3.0.11.RELEASE</version>
+                <version>3.1.3.RELEASE</version>
                 <exclusions>
                     <exclusion>
                         <groupId>org.slf4j</groupId>
                         <artifactId>slf4j-api</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.javassist</groupId>
-                        <artifactId>javassist</artifactId>
                     </exclusion>
                 </exclusions>
             </dependency>
@@ -390,25 +437,14 @@
                 <groupId>commons-io</groupId>
                 <artifactId>commons-io</artifactId>
                 <version>2.7</version>
-                <scope>compile</scope>
+                <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>com.github.ben-manes.caffeine</groupId>
                 <artifactId>caffeine</artifactId>
-                <version>2.8.2</version>
+                <version>2.9.3</version>
             </dependency>
-            <dependency>
-                <groupId>junit</groupId>
-                <artifactId>junit</artifactId>
-                <version>4.13.1</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.mockito</groupId>
-                <artifactId>mockito-core</artifactId>
-                <version>3.2.4</version>
-                <scope>test</scope>
-            </dependency>
+            <!-- https://mvnrepository.com/artifact/junit/junit -->
             <dependency>
                 <groupId>org.hamcrest</groupId>
                 <artifactId>hamcrest-core</artifactId>
@@ -419,18 +455,6 @@
                 <groupId>org.hamcrest</groupId>
                 <artifactId>hamcrest-library</artifactId>
                 <version>2.2</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.powermock</groupId>
-                <artifactId>powermock-module-junit4</artifactId>
-                <version>2.0.4</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.powermock</groupId>
-                <artifactId>powermock-api-mockito2</artifactId>
-                <version>2.0.4</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -451,6 +475,12 @@
                 <version>1.1.1</version>
                 <scope>test</scope>
             </dependency>
+            <dependency>
+                <groupId>net.bytebuddy</groupId>
+                <artifactId>byte-buddy</artifactId>
+                <version>1.18.5</version>
+                <scope>test</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -468,10 +498,6 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.hamcrest</groupId>
             <artifactId>hamcrest-core</artifactId>
         </dependency>
@@ -486,18 +512,6 @@
         <dependency>
             <groupId>co.unruly</groupId>
             <artifactId>java-8-matchers</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.powermock</groupId>
-            <artifactId>powermock-module-junit4</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.powermock</groupId>
-            <artifactId>powermock-api-mockito2</artifactId>
         </dependency>
         <dependency>
             <groupId>pl.pragmatists</groupId>
@@ -573,12 +587,61 @@
             <plugins>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-clean-plugin</artifactId>
+                    <version>3.4.1</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.14.0</version>
+                    <configuration>
+                        <annotationProcessorPaths>
+                            <path>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                                <version>${lombokVersion}</version>
+                            </path>
+                        </annotationProcessorPaths>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-source-plugin</artifactId>
+                    <version>3.3.1</version>
+                    <executions>
+                        <execution>
+                            <id>attach-sources</id>
+                            <phase>verify</phase>
+                            <goals>
+                                <goal>jar-no-fork</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-install-plugin</artifactId>
+                    <version>3.1.4</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-deploy-plugin</artifactId>
+                    <version>3.1.4</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-site-plugin</artifactId>
+                    <version>4.0.0-M4</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                    <version>3.5.3</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>3.0.0-M4</version>
+                    <version>3.5.3</version>
                     <configuration>
                         <excludes>
                             <exclude>**/*IntegrationTest</exclude>
@@ -604,7 +667,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-jar-plugin</artifactId>
-                    <version>3.2.0</version>
+                    <version>3.4.2</version>
                     <executions>
                         <execution>
                             <goals>
@@ -616,11 +679,11 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-release-plugin</artifactId>
-                    <version>2.5.3</version>
+                    <version>3.1.1</version>
                     <configuration>
+                        <goals>deploy</goals>
                         <useReleaseProfile>false</useReleaseProfile>
                         <autoVersionSubmodules>true</autoVersionSubmodules>
-                        <arguments>-Prelease</arguments>
                         <tagNameFormat>@{project.version}</tagNameFormat>
                         <allowTimestampedSnapshots>true</allowTimestampedSnapshots>
                     </configuration>
@@ -628,7 +691,7 @@
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>buildnumber-maven-plugin</artifactId>
-                    <version>1.1</version>
+                    <version>3.0.0</version>
                     <configuration>
                         <buildNumberPropertyName>revisionNumber</buildNumberPropertyName>
                         <getRevisionOnlyOnce>true</getRevisionOnlyOnce>
@@ -650,6 +713,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-dependency-plugin</artifactId>
+                    <version>3.8.1</version>
                     <executions>
                         <execution>
                             <id>Expand resources</id>
@@ -672,8 +736,8 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-enforcer-plugin</artifactId>
-                    <version>1.4.1</version>
-<!--                    <executions>
+                    <version>3.5.0</version>
+                    <executions>
                         <execution>
                             <id>enforce-no-snapshots</id>
                             <goals>
@@ -688,22 +752,17 @@
                                 <fail>true</fail>
                             </configuration>
                         </execution>
-                    </executions> -->
-                </plugin>
-                <!-- NB must be declare *before* the license-maven-plugin -->
-                <plugin>
-                    <groupId>org.commonjava.maven.plugins</groupId>
-                    <artifactId>directory-maven-plugin</artifactId>
-                    <version>0.1</version>
-                    <executions>
                         <execution>
-                            <id>directories</id>
+                            <id>enforce-maven</id>
                             <goals>
-                                <goal>highest-basedir</goal>
+                                <goal>enforce</goal>
                             </goals>
-                            <phase>validate</phase>
                             <configuration>
-                                <property>main.basedir</property>
+                                <rules>
+                                    <requireMavenVersion>
+                                        <version>[3.6.3,)</version>
+                                    </requireMavenVersion>
+                                </rules>
                             </configuration>
                         </execution>
                     </executions>
@@ -711,47 +770,91 @@
                 <plugin>
                     <groupId>com.mycila</groupId>
                     <artifactId>license-maven-plugin</artifactId>
-                    <version>3.0</version>
+                    <version>4.6</version>
                     <configuration>
-                        <header>${main.basedir}${file.separator}license-header.txt</header>
-                        <headerDefinitions>
-                            <headerDefinition>${main.basedir}${file.separator}license-format.xml</headerDefinition>
-                        </headerDefinitions>
+                        <licenseSets>
+                            <licenseSet>
+                                <header>${maven.multiModuleProjectDirectory}/license-header.txt</header>
+                                <headerDefinitions>
+                                    <headerDefinition>${maven.multiModuleProjectDirectory}/license-format.xml</headerDefinition>
+                                </headerDefinitions>
+                                <includes>
+                                    <include>**/*.java</include>
+                                    <include>**/*.xml</include>
+                                    <include>**/*.properties</include>
+                                </includes>
+                                <excludes>
+                                    <exclude>**/pom.xml</exclude>
+                                    <exclude>**/target/**</exclude>
+                                    <exclude>.git/**</exclude>
+                                    <exclude>.idea/**</exclude>
+                                    <exclude>.settings/**</exclude>
+                                    <exclude>.externalToolBuilders/</exclude>
+                                    <exclude>nbproject/private/</exclude>
+                                    <exclude>.classpath</exclude>
+                                    <exclude>.project</exclude>
+                                </excludes>
+                            </licenseSet>
+                        </licenseSets>
                         <mapping>
-                            <java>JAVA_STYLE</java>
-                            <xml>MYXML_STYLE</xml>
+                            <java>java_style</java>
+                            <xml>myxml_style</xml>
+                            <properties>SCRIPT_STYLE</properties>
                         </mapping>
-                        <includes>
-                            <include>**/*.java</include>
-                            <include>**/*.xml</include>
-                            <include>**/*.properties</include>
-                        </includes>
-                        <excludes>
-                            <exclude>license-format.xml</exclude>
-                            <exclude>**/pom.xml</exclude>
-                            <exclude>**/target/**</exclude>
-                            <exclude>.git/**</exclude>
-                            <exclude>.idea/**</exclude>
-                            <exclude>.settings/**</exclude>
-                            <exclude>.externalToolBuilders/</exclude>
-                            <exclude>nbproject/private/</exclude>
-                            <exclude>.vscode/**</exclude>
-                        </excludes>
                     </configuration>
                     <executions>
                         <execution>
-                            <id>add-license</id>
                             <goals>
                                 <goal>format</goal>
                             </goals>
-                            <phase>validate</phase>
+                            <phase>process-sources</phase>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>com.diffplug.spotless</groupId>
+                    <artifactId>spotless-maven-plugin</artifactId>
+                    <version>2.30.0</version>
+                    <configuration>
+                        <java>
+                            <!-- Eclipse formatter from openmrs-tools dependency -->
+                            <eclipse>
+                                <file>eclipse/OpenMRSFormatter.xml</file>
+                            </eclipse>
+                            <!-- Import ordering -->
+                            <importOrder>
+                                <order>javax,java,</order>
+                            </importOrder>
+                            <removeUnusedImports />
+                            <includes>
+                                <include>**/*.java</include>
+                            </includes>
+                            <excludes>
+                                <exclude>**/target/**</exclude>
+                            </excludes>
+                        </java>
+                    </configuration>
+                    <dependencies>
+                        <!-- Eclipse formatter configuration from openmrs-tools -->
+                        <dependency>
+                            <groupId>org.openmrs.tools</groupId>
+                            <artifactId>openmrs-tools</artifactId>
+                            <version>${openmrsPlatformToolsVersion}</version>
+                        </dependency>
+                    </dependencies>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>apply</goal>
+                            </goals>
+                            <phase>process-sources</phase>
                         </execution>
                     </executions>
                 </plugin>
                 <plugin>
                     <groupId>org.jacoco</groupId>
                     <artifactId>jacoco-maven-plugin</artifactId>
-                    <version>0.8.2</version>
+                    <version>0.8.12</version>
                     <executions>
                         <execution>
                             <goals>
@@ -767,45 +870,6 @@
                         </execution>
                     </executions>
                 </plugin>
-                <plugin>
-                    <groupId>net.revelc.code.formatter</groupId>
-                    <artifactId>formatter-maven-plugin</artifactId>
-                    <version>2.13.0</version>
-                    <configuration>
-                        <lineEnding>LF</lineEnding>
-                        <configFile>eclipse/OpenMRSFormatter.xml</configFile>
-                    </configuration>
-                    <dependencies>
-                        <dependency>
-                            <groupId>org.openmrs.tools</groupId>
-                            <artifactId>openmrs-tools</artifactId>
-                            <version>${openmrsPlatformToolsVersion}</version>
-                        </dependency>
-                    </dependencies>
-                    <executions>
-                        <execution>
-                            <goals>
-                                <goal>format</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                </plugin>
-                <plugin>
-                    <groupId>net.revelc.code</groupId>
-                    <artifactId>impsort-maven-plugin</artifactId>
-                    <version>1.5.0</version>
-                    <configuration>
-                        <groups>javax, java, *</groups>
-                        <removeUnused>true</removeUnused>
-                    </configuration>
-                    <executions>
-                        <execution>
-                            <goals>
-                                <goal>sort</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                </plugin>
             </plugins>
         </pluginManagement>
     </build>
@@ -815,10 +879,10 @@
         <maven.compiler.target>1.8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.build.outputEncoding>UTF-8</project.build.outputEncoding>
-        <lombokVersion>1.18.16</lombokVersion>
-        <openmrsPlatformVersion>2.0.5</openmrsPlatformVersion>
-        <openmrsPlatformToolsVersion>2.4.0</openmrsPlatformToolsVersion>
-        <hapifhirVersion>5.4.0</hapifhirVersion>
+        <lombokVersion>1.18.38</lombokVersion>
+        <openmrsPlatformVersion>2.8.0</openmrsPlatformVersion>
+        <openmrsPlatformToolsVersion>2.8.0</openmrsPlatformToolsVersion>
+        <hapifhirVersion>5.7.9</hapifhirVersion>
         <ucumVersion>1.0.3</ucumVersion>
     </properties>
 
@@ -830,7 +894,6 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-failsafe-plugin</artifactId>
-                        <version>3.0.0-M4</version>
                         <configuration>
                             <includes>
                                 <include>**/*IntegrationTest</include>
@@ -855,7 +918,6 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-failsafe-plugin</artifactId>
-                        <version>3.0.0-M4</version>
                         <configuration>
                             <includes>
                                 <include>**/*DomainTest</include>
@@ -878,6 +940,64 @@
                         </configuration>
                     </plugin>
                 </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>java11plus-spotless</id>
+            <activation>
+                <jdk>[11,)</jdk>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.diffplug.spotless</groupId>
+                        <artifactId>spotless-maven-plugin</artifactId>
+                        <version>2.43.0</version>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>artifactory</id>
+            <activation>
+                <property>
+                    <name>use.artifactory</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jfrog.buildinfo</groupId>
+                        <artifactId>artifactory-maven-plugin</artifactId>
+                    </plugin>
+                </plugins>
+                <pluginManagement>
+                    <plugins>
+                        <plugin>
+                            <groupId>org.jfrog.buildinfo</groupId>
+                            <artifactId>artifactory-maven-plugin</artifactId>
+                            <version>3.6.1</version>
+                            <executions>
+                                <execution>
+                                    <id>publish-artifact</id>
+                                    <goals>
+                                        <goal>publish</goal>
+                                    </goals>
+                                    <configuration>
+                                        <publisher>
+                                            <contextUrl>${artifactory.url}</contextUrl>
+                                            <username>${artifactory.username}</username>
+                                            <password>${artifactory.password}</password>
+                                            <repoKey>modules</repoKey>
+                                            <snapshotRepoKey>snapshots</snapshotRepoKey>
+                                        </publisher>
+                                    </configuration>
+                                </execution>
+                            </executions>
+                        </plugin>
+                    </plugins>
+                </pluginManagement>
             </build>
         </profile>
     </profiles>

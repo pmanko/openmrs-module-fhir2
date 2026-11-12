@@ -17,6 +17,7 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertNull;
 import static org.mockito.Mockito.when;
 
+import java.text.ParseException;
 import java.util.Arrays;
 import java.util.Locale;
 
@@ -82,6 +83,7 @@ public class DosageTranslatorImplTest {
 		
 		quantityCodingTranslator = new MedicationQuantityCodingTranslatorImpl();
 		quantityCodingTranslator.setConceptTranslator(conceptTranslator);
+		quantityCodingTranslator.setConceptSourceService(conceptSourceService);
 		
 		timingTranslator = new MedicationRequestTimingTranslatorImpl();
 		timingTranslator.setConceptTranslator(conceptTranslator);
@@ -105,6 +107,14 @@ public class DosageTranslatorImplTest {
 		Dosage result = dosageTranslator.toFhirResource(drugOrder);
 		assertThat(result, notNullValue());
 		assertThat(result.getText(), equalTo(DOSING_INSTRUCTION));
+	}
+	
+	@Test
+	public void toFhirResource_shouldTranslateOrdersInstructionToDosageAdditionalInstructions() {
+		drugOrder.setInstructions(DOSING_INSTRUCTION);
+		Dosage result = dosageTranslator.toFhirResource(drugOrder);
+		assertThat(result, notNullValue());
+		assertThat(result.getAdditionalInstruction().get(0).getText(), equalTo(DOSING_INSTRUCTION));
 	}
 	
 	@Test
@@ -211,6 +221,23 @@ public class DosageTranslatorImplTest {
 	}
 	
 	@Test
+	public void toFhirResource_shouldReturnDosageWhenSubmittingDrugOrderWithDoseUnitButNoDose() throws ParseException {
+		Concept mg = new Concept();
+		mg.addName(new ConceptName("mg", Locale.ENGLISH));
+		mg.setUuid(CONCEPT_UUID);
+		
+		drugOrder.setDose(null);
+		drugOrder.setDoseUnits(mg);
+		drugOrder.setAsNeeded(Boolean.TRUE);
+		drugOrder.setDosingInstructions(DOSING_INSTRUCTION);
+		Dosage result = dosageTranslator.toFhirResource(drugOrder);
+		
+		assertThat(result, notNullValue());
+		assertThat(result.getAsNeededBooleanType().booleanValue(), is(true));
+		assertThat(result.getText(), equalTo(DOSING_INSTRUCTION));
+	}
+	
+	@Test
 	public void toFhirResource_shouldTranslateDrugOrderDoseToDoseQuantityPreferringRxNormIfPresent() {
 		ConceptMapType sameAs = new ConceptMapType();
 		sameAs.setUuid(ConceptMapType.SAME_AS_MAP_TYPE_UUID);
@@ -255,7 +282,9 @@ public class DosageTranslatorImplTest {
 		
 		drugOrder.setDose(20.0);
 		drugOrder.setDoseUnits(mg);
+		
 		Dosage result = dosageTranslator.toFhirResource(drugOrder);
+		
 		assertThat(result, notNullValue());
 		assertThat(result.getDoseAndRate().get(0).getDoseQuantity().getValue().doubleValue(), equalTo(20.0));
 		assertThat(result.getDoseAndRate().get(0).getDoseQuantity().getUnit(), is("mg"));
@@ -295,5 +324,17 @@ public class DosageTranslatorImplTest {
 		DrugOrder result = dosageTranslator.toOpenmrsType(new DrugOrder(), dosage);
 		assertThat(result, notNullValue());
 		assertThat(result.getDoseUnits(), equalTo(mg));
+	}
+	
+	@Test
+	public void toOpenmrsType_shouldTranslateAdditionalInstructionsToOrderInstructions() {
+		Dosage dosage = new Dosage();
+		CodeableConcept additionalInstructions = new CodeableConcept();
+		additionalInstructions.setText(DOSING_INSTRUCTION);
+		dosage.addAdditionalInstruction(additionalInstructions);
+		
+		DrugOrder result = dosageTranslator.toOpenmrsType(new DrugOrder(), dosage);
+		assertThat(result, notNullValue());
+		assertThat(result.getInstructions(), equalTo(DOSING_INSTRUCTION));
 	}
 }

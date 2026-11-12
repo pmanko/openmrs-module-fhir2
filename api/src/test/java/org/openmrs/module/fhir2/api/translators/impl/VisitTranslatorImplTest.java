@@ -44,7 +44,7 @@ import org.openmrs.PersonName;
 import org.openmrs.Visit;
 import org.openmrs.VisitType;
 import org.openmrs.module.fhir2.FhirConstants;
-import org.openmrs.module.fhir2.api.mappings.EncounterClassMap;
+import org.openmrs.module.fhir2.api.dao.impl.FhirEncounterClassMapDaoImpl;
 import org.openmrs.module.fhir2.api.translators.EncounterLocationTranslator;
 import org.openmrs.module.fhir2.api.translators.PatientReferenceTranslator;
 
@@ -84,7 +84,7 @@ public class VisitTranslatorImplTest {
 	private VisitPeriodTranslatorImpl visitPeriodTranslator;
 	
 	@Mock
-	private EncounterClassMap encounterClassMap;
+	private FhirEncounterClassMapDaoImpl encounterClassMap;
 	
 	private VisitTranslatorImpl visitTranslator;
 	
@@ -273,6 +273,16 @@ public class VisitTranslatorImplTest {
 		Encounter result = visitTranslator.toFhirResource(visit);
 		assertThat(result, notNullValue());
 		assertThat(result.getMeta().getLastUpdated(), DateMatchers.sameDay(new Date()));
+	}
+	
+	@Test
+	public void toFhirResource_shouldTranslateToVersionId() {
+		Visit visit = new Visit();
+		visit.setDateChanged(new Date());
+		
+		Encounter result = visitTranslator.toFhirResource(visit);
+		assertThat(result, notNullValue());
+		assertThat(result.getMeta().getVersionId(), notNullValue());
 	}
 	
 	@Test

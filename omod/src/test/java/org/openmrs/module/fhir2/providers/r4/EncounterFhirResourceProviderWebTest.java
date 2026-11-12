@@ -21,6 +21,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.startsWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
@@ -66,7 +67,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 @RunWith(MockitoJUnitRunner.class)
 public class EncounterFhirResourceProviderWebTest extends BaseFhirR4ResourceProviderWebTest<EncounterFhirResourceProvider, Encounter> {
 	
-	private static final String ENCOUNTER_UUID = "430bbb70-6a9c-4e1e-badb-9d1034b1b5e9";
+	private static final String ENCOUNTER_UUID = "6519d653-393b-4118-9c83-a3715b82d4ac"; // encounter 3 from standard test dataset
 	
 	private static final String ENCOUNTER_TYPE_UUID = "07000be2-26b6-4cce-8b40-866d8435b613";
 	
@@ -74,7 +75,7 @@ public class EncounterFhirResourceProviderWebTest extends BaseFhirR4ResourceProv
 	
 	private static final String PATIENT_IDENTIFIER = "h43489-h";
 	
-	private static final String PATIENT_UUID = "d9bc6c12-6adc-4ca6-8bde-441ec1a1c344";
+	private static final String PATIENT_UUID = "5946f880-b197-400b-9caa-a3c661d23041"; // patient 7 from the standard test dataset
 	
 	private static final String PATIENT_GIVEN_NAME = "Hannibal";
 	
@@ -94,9 +95,7 @@ public class EncounterFhirResourceProviderWebTest extends BaseFhirR4ResourceProv
 	
 	private static final String PARTICIPANT_IDENTIFIER = "1000WF";
 	
-	private static final String LOCATION_UUID = "c36006e5-9fbb-4f20-866b-0ece245615a1";
-	
-	private static final String PARTICIPANT_UUID = "b566821c-1ad9-473b-836b-9e9c67688e02";
+	private static final String LOCATION_UUID = "9356400c-a5a2-4532-8f2b-2361b3446eb8"; // location 2 from the standard test dataset
 	
 	private static final String LAST_UPDATED_DATE = "eq2020-09-03";
 	
@@ -141,7 +140,7 @@ public class EncounterFhirResourceProviderWebTest extends BaseFhirR4ResourceProv
 		MockHttpServletResponse response = get("/Encounter/" + ENCOUNTER_UUID).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), equalTo(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		assertThat(readResponse(response).getIdElement().getIdPart(), equalTo(ENCOUNTER_UUID));
 	}
 	
@@ -751,7 +750,7 @@ public class EncounterFhirResourceProviderWebTest extends BaseFhirR4ResourceProv
 		MockHttpServletResponse response = get(uri).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), equalTo(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		
 		Bundle results = readBundleResponse(response);
 		assertThat(results.getEntry(), notNullValue());
@@ -828,7 +827,7 @@ public class EncounterFhirResourceProviderWebTest extends BaseFhirR4ResourceProv
 		MockHttpServletResponse response = delete("/Encounter/" + ENCOUNTER_UUID).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), equalTo(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 	}
 	
 	@Test
@@ -860,7 +859,7 @@ public class EncounterFhirResourceProviderWebTest extends BaseFhirR4ResourceProv
 		MockHttpServletResponse response = get(uri).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), equalTo(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		
 		Bundle results = readBundleResponse(response);
 		assertThat(results.getEntry(), notNullValue());

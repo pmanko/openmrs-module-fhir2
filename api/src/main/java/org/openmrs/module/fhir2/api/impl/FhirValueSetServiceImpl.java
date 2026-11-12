@@ -9,46 +9,27 @@
  */
 package org.openmrs.module.fhir2.api.impl;
 
+import static org.openmrs.module.fhir2.FhirConstants.TITLE_SEARCH_HANDLER;
+
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.StringAndListParam;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.Setter;
 import org.hl7.fhir.r4.model.ValueSet;
-import org.openmrs.Concept;
-import org.openmrs.module.fhir2.FhirConstants;
 import org.openmrs.module.fhir2.api.FhirValueSetService;
-import org.openmrs.module.fhir2.api.dao.FhirConceptDao;
-import org.openmrs.module.fhir2.api.search.SearchQuery;
-import org.openmrs.module.fhir2.api.search.SearchQueryInclude;
 import org.openmrs.module.fhir2.api.search.param.SearchParameterMap;
-import org.openmrs.module.fhir2.api.translators.ValueSetTranslator;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
-@Transactional
-@Setter(AccessLevel.PACKAGE)
-@Getter(AccessLevel.PROTECTED)
-public class FhirValueSetServiceImpl extends BaseFhirService<ValueSet, Concept> implements FhirValueSetService {
-	
-	@Autowired
-	private ValueSetTranslator translator;
-	
-	@Autowired
-	private FhirConceptDao dao;
-	
-	@Autowired
-	private SearchQueryInclude<ValueSet> searchQueryInclude;
-	
-	@Autowired
-	private SearchQuery<Concept, ValueSet, FhirConceptDao, ValueSetTranslator, SearchQueryInclude<ValueSet>> searchQuery;
+public class FhirValueSetServiceImpl extends BaseCompositeFhirService<ValueSet> implements FhirValueSetService {
 	
 	@Override
+	@Transactional(readOnly = true)
 	public IBundleProvider searchForValueSets(StringAndListParam title) {
-		SearchParameterMap theParams = new SearchParameterMap().addParameter(FhirConstants.TITLE_SEARCH_HANDLER, title);
+		SearchParameterMap theParams = new SearchParameterMap();
+		if (title != null && title.size() > 0) {
+			theParams.addParameter(TITLE_SEARCH_HANDLER, title);
+		}
 		
-		return searchQuery.getQueryResults(theParams, dao, translator, searchQueryInclude);
+		return doSearch(theParams);
 	}
 }

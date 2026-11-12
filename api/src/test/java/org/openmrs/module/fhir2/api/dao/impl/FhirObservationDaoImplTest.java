@@ -11,27 +11,28 @@ package org.openmrs.module.fhir2.api.dao.impl;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.assertThrows;
+import static org.openmrs.util.PrivilegeConstants.GET_OBS;
 
 import java.util.Collection;
-import java.util.List;
 
 import ca.uhn.fhir.rest.param.TokenAndListParam;
 import ca.uhn.fhir.rest.param.TokenParam;
 import org.junit.Before;
 import org.junit.Test;
 import org.openmrs.Obs;
+import org.openmrs.api.APIAuthenticationException;
+import org.openmrs.api.context.Context;
+import org.openmrs.module.fhir2.BaseFhirContextSensitiveTest;
 import org.openmrs.module.fhir2.FhirConstants;
-import org.openmrs.module.fhir2.TestFhirSpringConfiguration;
 import org.openmrs.module.fhir2.api.dao.FhirObservationDao;
 import org.openmrs.module.fhir2.api.search.param.SearchParameterMap;
-import org.openmrs.test.BaseModuleContextSensitiveTest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.ContextConfiguration;
 
-@ContextConfiguration(classes = TestFhirSpringConfiguration.class, inheritLocations = false)
-public class FhirObservationDaoImplTest extends BaseModuleContextSensitiveTest {
+public class FhirObservationDaoImplTest extends BaseFhirContextSensitiveTest {
 	
 	private static final String OBS_DATA_XML = "org/openmrs/module/fhir2/api/dao/impl/FhirObservationDaoImplTest_initial_data_suppl.xml";
 	
@@ -40,6 +41,8 @@ public class FhirObservationDaoImplTest extends BaseModuleContextSensitiveTest {
 	private static final String BAD_OBS_UUID = "121b73a6-e1a4-4424-8610-d5765bf2fdf7";
 	
 	private static final String OBS_CONCEPT_ID = "5089";
+	
+	private static final String VOIDED_OBS_UUID = "94dhs003-a55d-43c4-ac7a-bd6d1ba63381";
 	
 	@Autowired
 	private FhirObservationDao dao;
@@ -65,7 +68,73 @@ public class FhirObservationDaoImplTest extends BaseModuleContextSensitiveTest {
 	}
 	
 	@Test
+	public void exists_shouldReturnTrueForVoidedObs() {
+		// given
+		String uuid = VOIDED_OBS_UUID;
+		
+		// when
+		boolean result = dao.exists(uuid);
+		
+		// then
+		// must agree with get() so the service layer can report the voided resource as gone rather than missing
+		assertThat(result, equalTo(true));
+		assertThat(dao.get(uuid), notNullValue());
+	}
+	
+	@Test
+	public void exists_shouldReturnFalseForUnknownUuid() {
+		// given
+		String uuid = BAD_OBS_UUID;
+		
+		// when
+		boolean result = dao.exists(uuid);
+		
+		// then
+		assertThat(result, equalTo(false));
+	}
+	
+	@Test
 	public void search_shouldReturnSearchQuery() {
+		Collection<Obs> obs = dao.getSearchResults(observationSearchParams());
+		
+		assertThat(obs, notNullValue());
+	}
+	
+	@Test
+	public void getSearchResults_shouldRequireGetObsPrivilege() {
+		SearchParameterMap theParams = observationSearchParams();
+		
+		Context.logout();
+		
+		assertThrows(APIAuthenticationException.class, () -> dao.getSearchResults(theParams));
+		
+		try {
+			Context.addProxyPrivilege(GET_OBS);
+			assertThat(dao.getSearchResults(theParams), notNullValue());
+		}
+		finally {
+			Context.removeProxyPrivilege(GET_OBS);
+		}
+	}
+	
+	@Test
+	public void getSearchResultsCount_shouldRequireGetObsPrivilege() {
+		SearchParameterMap theParams = observationSearchParams();
+		
+		Context.logout();
+		
+		assertThrows(APIAuthenticationException.class, () -> dao.getSearchResultsCount(theParams));
+		
+		try {
+			Context.addProxyPrivilege(GET_OBS);
+			assertThat(dao.getSearchResultsCount(theParams), greaterThan(0));
+		}
+		finally {
+			Context.removeProxyPrivilege(GET_OBS);
+		}
+	}
+	
+	private static SearchParameterMap observationSearchParams() {
 		TokenAndListParam code = new TokenAndListParam();
 		TokenParam codingToken = new TokenParam();
 		codingToken.setValue(OBS_CONCEPT_ID);
@@ -73,11 +142,7 @@ public class FhirObservationDaoImplTest extends BaseModuleContextSensitiveTest {
 		
 		SearchParameterMap theParams = new SearchParameterMap();
 		theParams.addParameter(FhirConstants.CODED_SEARCH_HANDLER, code);
-		
-		List<Integer> matchingResourceIds = dao.getSearchResultIds(theParams);
-		Collection<Obs> obs = dao.getSearchResults(theParams, matchingResourceIds);
-		
-		assertThat(obs, notNullValue());
+		return theParams;
 	}
 	
 }

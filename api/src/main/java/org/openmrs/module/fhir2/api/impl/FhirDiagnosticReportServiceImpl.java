@@ -9,64 +9,19 @@
  */
 package org.openmrs.module.fhir2.api.impl;
 
-import java.util.HashSet;
-
-import ca.uhn.fhir.model.api.Include;
-import ca.uhn.fhir.rest.api.SortSpec;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
-import ca.uhn.fhir.rest.param.DateRangeParam;
-import ca.uhn.fhir.rest.param.ReferenceAndListParam;
-import ca.uhn.fhir.rest.param.TokenAndListParam;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.Setter;
 import org.hl7.fhir.r4.model.DiagnosticReport;
-import org.openmrs.module.fhir2.FhirConstants;
 import org.openmrs.module.fhir2.api.FhirDiagnosticReportService;
-import org.openmrs.module.fhir2.api.dao.FhirDiagnosticReportDao;
-import org.openmrs.module.fhir2.api.search.SearchQuery;
-import org.openmrs.module.fhir2.api.search.SearchQueryInclude;
-import org.openmrs.module.fhir2.api.search.param.SearchParameterMap;
-import org.openmrs.module.fhir2.api.translators.DiagnosticReportTranslator;
-import org.openmrs.module.fhir2.model.FhirDiagnosticReport;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.openmrs.module.fhir2.api.search.param.DiagnosticReportSearchParams;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
-@Transactional
-@Setter(AccessLevel.PACKAGE)
-@Getter(AccessLevel.PROTECTED)
-public class FhirDiagnosticReportServiceImpl extends BaseFhirService<DiagnosticReport, FhirDiagnosticReport> implements FhirDiagnosticReportService {
-	
-	@Autowired
-	private FhirDiagnosticReportDao dao;
-	
-	@Autowired
-	private DiagnosticReportTranslator translator;
-	
-	@Autowired
-	private SearchQueryInclude<DiagnosticReport> searchQueryInclude;
-	
-	@Autowired
-	private SearchQuery<FhirDiagnosticReport, DiagnosticReport, FhirDiagnosticReportDao, DiagnosticReportTranslator, SearchQueryInclude<DiagnosticReport>> searchQuery;
+public class FhirDiagnosticReportServiceImpl extends BaseCompositeFhirService<DiagnosticReport> implements FhirDiagnosticReportService {
 	
 	@Override
-	public IBundleProvider searchForDiagnosticReports(ReferenceAndListParam encounterReference,
-	        ReferenceAndListParam patientReference, DateRangeParam issueDate, TokenAndListParam code,
-	        ReferenceAndListParam result, TokenAndListParam id, DateRangeParam lastUpdated, SortSpec sort,
-	        HashSet<Include> includes) {
-		
-		SearchParameterMap theParams = new SearchParameterMap()
-		        .addParameter(FhirConstants.ENCOUNTER_REFERENCE_SEARCH_HANDLER, encounterReference)
-		        .addParameter(FhirConstants.PATIENT_REFERENCE_SEARCH_HANDLER, patientReference)
-		        .addParameter(FhirConstants.DATE_RANGE_SEARCH_HANDLER, issueDate)
-		        .addParameter(FhirConstants.CODED_SEARCH_HANDLER, code)
-		        .addParameter(FhirConstants.RESULT_SEARCH_HANDLER, result)
-		        .addParameter(FhirConstants.COMMON_SEARCH_HANDLER, FhirConstants.ID_PROPERTY, id)
-		        .addParameter(FhirConstants.COMMON_SEARCH_HANDLER, FhirConstants.LAST_UPDATED_PROPERTY, lastUpdated)
-		        .addParameter(FhirConstants.INCLUDE_SEARCH_HANDLER, includes).setSortSpec(sort);
-		
-		return searchQuery.getQueryResults(theParams, dao, translator, searchQueryInclude);
+	@Transactional(readOnly = true)
+	public IBundleProvider searchForDiagnosticReports(DiagnosticReportSearchParams diagnosticReportSearchParams) {
+		return doSearch(diagnosticReportSearchParams.toSearchParameterMap());
 	}
 }

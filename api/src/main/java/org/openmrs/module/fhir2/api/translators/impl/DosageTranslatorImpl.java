@@ -9,9 +9,11 @@
  */
 package org.openmrs.module.fhir2.api.translators.impl;
 
+import static lombok.AccessLevel.PROTECTED;
+
 import javax.annotation.Nonnull;
 
-import lombok.AccessLevel;
+import lombok.Getter;
 import lombok.Setter;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.Coding;
@@ -27,16 +29,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
-@Setter(AccessLevel.PACKAGE)
 public class DosageTranslatorImpl implements DosageTranslator {
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private ConceptTranslator conceptTranslator;
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private MedicationQuantityCodingTranslatorImpl quantityCodingTranslator;
 	
-	@Autowired
+	@Getter(PROTECTED)
+	@Setter(value = PROTECTED, onMethod_ = @Autowired)
 	private MedicationRequestTimingTranslator timingTranslator;
 	
 	@Override
@@ -44,13 +48,18 @@ public class DosageTranslatorImpl implements DosageTranslator {
 		if (drugOrder == null) {
 			return null;
 		}
+		
 		Dosage dosage = new Dosage();
 		dosage.setText(drugOrder.getDosingInstructions());
 		dosage.setAsNeeded(new BooleanType(drugOrder.getAsNeeded()));
 		dosage.setRoute(conceptTranslator.toFhirResource(drugOrder.getRoute()));
 		dosage.setTiming(timingTranslator.toFhirResource(drugOrder));
 		
-		if (drugOrder.getDose() != null || drugOrder.getDoseUnits() != null) {
+		if (drugOrder.getInstructions() != null) {
+			dosage.addAdditionalInstruction().setText(drugOrder.getInstructions());
+		}
+		
+		if (drugOrder.getDose() != null) {
 			Dosage.DosageDoseAndRateComponent doseAndRate = new Dosage.DosageDoseAndRateComponent();
 			Quantity dose = new SimpleQuantity();
 			dose.setValue(drugOrder.getDose());
@@ -59,7 +68,7 @@ public class DosageTranslatorImpl implements DosageTranslator {
 				if (coding != null) {
 					dose.setSystem(coding.getSystem());
 					dose.setCode(coding.getCode());
-					dose.setUnit(coding.getDisplay());
+					dose.setUnit(drugOrder.getDoseUnits().getDisplayString());
 				}
 			}
 			doseAndRate.setDose(dose);
@@ -72,6 +81,11 @@ public class DosageTranslatorImpl implements DosageTranslator {
 	@Override
 	public DrugOrder toOpenmrsType(@Nonnull DrugOrder drugOrder, @Nonnull Dosage dosage) {
 		drugOrder.setDosingInstructions(dosage.getText());
+		
+		if (dosage.hasAdditionalInstruction()) {
+			drugOrder.setInstructions(dosage.getAdditionalInstructionFirstRep().getText());
+		}
+		
 		if (dosage.getAsNeededBooleanType() != null) {
 			drugOrder.setAsNeeded(dosage.getAsNeededBooleanType().getValue());
 		}

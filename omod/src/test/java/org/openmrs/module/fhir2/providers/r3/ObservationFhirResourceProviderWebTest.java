@@ -19,6 +19,7 @@ import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.startsWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
@@ -34,8 +35,8 @@ import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.util.Calendar;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 
 import ca.uhn.fhir.model.api.Include;
 import ca.uhn.fhir.rest.api.SortSpec;
@@ -126,7 +127,7 @@ public class ObservationFhirResourceProviderWebTest extends BaseFhirR3ResourcePr
 		MockHttpServletResponse response = get("/Observation/" + OBS_UUID).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), equalTo(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		
 		Observation resource = readResponse(response);
 		assertThat(resource.getIdElement().getIdPart(), equalTo(OBS_UUID));
@@ -160,7 +161,7 @@ public class ObservationFhirResourceProviderWebTest extends BaseFhirR3ResourcePr
 		MockHttpServletResponse response = delete("/Observation/" + OBS_UUID).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), equalTo(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 	}
 	
 	@Test
@@ -217,10 +218,10 @@ public class ObservationFhirResourceProviderWebTest extends BaseFhirR3ResourcePr
 		SortSpec sort = searchParamsCaptor.getValue().getSort();
 		assertThat(sort, nullValue());
 		
-		HashSet<Include> includes = searchParamsCaptor.getValue().getIncludes();
+		Set<Include> includes = searchParamsCaptor.getValue().getIncludes();
 		assertThat(includes, nullValue());
 		
-		HashSet<Include> revIncludes = searchParamsCaptor.getValue().getRevIncludes();
+		Set<Include> revIncludes = searchParamsCaptor.getValue().getRevIncludes();
 		assertThat(revIncludes, nullValue());
 	}
 	
@@ -687,7 +688,7 @@ public class ObservationFhirResourceProviderWebTest extends BaseFhirR3ResourcePr
 		verifyUri("/Observation?_include=Observation:encounter");
 		verify(observationService).searchForObservations(searchParamsCaptor.capture());
 		
-		HashSet<Include> includes = searchParamsCaptor.getValue().getIncludes();
+		Set<Include> includes = searchParamsCaptor.getValue().getIncludes();
 		
 		assertThat(includes, notNullValue());
 		assertThat(includes.size(), equalTo(1));
@@ -700,7 +701,7 @@ public class ObservationFhirResourceProviderWebTest extends BaseFhirR3ResourcePr
 		verifyUri("/Observation?_include=Observation:patient");
 		verify(observationService).searchForObservations(searchParamsCaptor.capture());
 		
-		HashSet<Include> includes = searchParamsCaptor.getValue().getIncludes();
+		Set<Include> includes = searchParamsCaptor.getValue().getIncludes();
 		
 		assertThat(includes, notNullValue());
 		assertThat(includes.size(), equalTo(1));
@@ -713,7 +714,7 @@ public class ObservationFhirResourceProviderWebTest extends BaseFhirR3ResourcePr
 		verifyUri("/Observation?_include=Observation:related-type");
 		verify(observationService).searchForObservations(searchParamsCaptor.capture());
 		
-		HashSet<Include> includes = searchParamsCaptor.getValue().getIncludes();
+		Set<Include> includes = searchParamsCaptor.getValue().getIncludes();
 		
 		assertThat(includes, notNullValue());
 		assertThat(includes.size(), equalTo(1));
@@ -726,7 +727,7 @@ public class ObservationFhirResourceProviderWebTest extends BaseFhirR3ResourcePr
 		verifyUri("/Observation?_include=Observation:related-type&_include=Observation:encounter");
 		verify(observationService).searchForObservations(searchParamsCaptor.capture());
 		
-		HashSet<Include> includes = searchParamsCaptor.getValue().getIncludes();
+		Set<Include> includes = searchParamsCaptor.getValue().getIncludes();
 		
 		assertThat(includes, notNullValue());
 		assertThat(includes.size(), equalTo(2));
@@ -742,7 +743,7 @@ public class ObservationFhirResourceProviderWebTest extends BaseFhirR3ResourcePr
 		verifyUri("/Observation?_revinclude=Observation:related-type");
 		verify(observationService).searchForObservations(searchParamsCaptor.capture());
 		
-		HashSet<Include> revIncludes = searchParamsCaptor.getValue().getRevIncludes();
+		Set<Include> revIncludes = searchParamsCaptor.getValue().getRevIncludes();
 		
 		assertThat(revIncludes, notNullValue());
 		assertThat(revIncludes.size(), equalTo(1));
@@ -755,7 +756,7 @@ public class ObservationFhirResourceProviderWebTest extends BaseFhirR3ResourcePr
 		verifyUri("/Observation?_revinclude=DiagnosticReport:result");
 		verify(observationService).searchForObservations(searchParamsCaptor.capture());
 		
-		HashSet<Include> revIncludes = searchParamsCaptor.getValue().getRevIncludes();
+		Set<Include> revIncludes = searchParamsCaptor.getValue().getRevIncludes();
 		
 		assertThat(revIncludes, notNullValue());
 		assertThat(revIncludes.size(), equalTo(1));
@@ -768,7 +769,7 @@ public class ObservationFhirResourceProviderWebTest extends BaseFhirR3ResourcePr
 		verifyUri("/Observation?_revinclude=Observation:related-type&_revinclude=DiagnosticReport:result");
 		verify(observationService).searchForObservations(searchParamsCaptor.capture());
 		
-		HashSet<Include> revIncludes = searchParamsCaptor.getValue().getRevIncludes();
+		Set<Include> revIncludes = searchParamsCaptor.getValue().getRevIncludes();
 		
 		assertThat(revIncludes, notNullValue());
 		assertThat(revIncludes.size(), equalTo(2));
@@ -997,7 +998,7 @@ public class ObservationFhirResourceProviderWebTest extends BaseFhirR3ResourcePr
 		MockHttpServletResponse response = get(uri).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), equalTo(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		
 		Bundle results = readBundleResponse(response);
 		assertThat(results.getEntry(), notNullValue());
@@ -1016,7 +1017,7 @@ public class ObservationFhirResourceProviderWebTest extends BaseFhirR3ResourcePr
 		MockHttpServletResponse response = get(uri).accept(FhirMediaTypes.JSON).go();
 		
 		MatcherAssert.assertThat(response, isOk());
-		MatcherAssert.assertThat(response.getContentType(), equalTo(FhirMediaTypes.JSON.toString()));
+		MatcherAssert.assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		
 		Bundle results = readBundleResponse(response);
 		assertThat(results.getEntry(), notNullValue());
@@ -1034,7 +1035,7 @@ public class ObservationFhirResourceProviderWebTest extends BaseFhirR3ResourcePr
 		MockHttpServletResponse response = get(uri).accept(FhirMediaTypes.JSON).go();
 		
 		assertThat(response, isOk());
-		assertThat(response.getContentType(), equalTo(FhirMediaTypes.JSON.toString()));
+		assertThat(response.getContentType(), startsWith(FhirMediaTypes.JSON.toString()));
 		
 		Bundle results = readBundleResponse(response);
 		assertThat(results.getEntry(), notNullValue());
